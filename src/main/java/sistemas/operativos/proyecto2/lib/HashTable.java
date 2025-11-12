@@ -61,6 +61,12 @@ public class HashTable<T> {
         return res;
     }
     
+    public LinkedList<T> getKeyList(String key) {
+        int assign = assign(key);
+        
+        return this.list[assign];
+    }
+    
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder().append('[');

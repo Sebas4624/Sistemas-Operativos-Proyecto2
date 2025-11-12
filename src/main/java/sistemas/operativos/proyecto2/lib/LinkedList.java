@@ -132,7 +132,7 @@ public class LinkedList<T> implements Iterable<T> {
         StringBuilder sb = new StringBuilder().append('[');
         Node<T> cur = head;
         while (cur != null) {
-            sb.append(cur.value);
+            sb.append(cur.value.toString());
             cur = cur.next;
             if (cur != null) sb.append(", ");
         }
