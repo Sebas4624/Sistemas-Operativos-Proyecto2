@@ -18,7 +18,7 @@ public class HashTable<T> {
         }
     }
     
-    public int assign(String specStr) {
+    int assign(String specStr) {
         int strSize = specStr.length();
         
         int assignation = 0;
