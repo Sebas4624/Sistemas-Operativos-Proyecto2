@@ -9,21 +9,30 @@ import sistemas.operativos.proyecto2.utils.Printer;
  * @author sebas
  */
 public class Simulator {
+    
+    public enum UserMode {
+        ADMIN,
+        USER
+    }
+        
     final int NUM_BLOCKS;
     public boolean[] blockFree;
     public Folder rootFolder = new Folder("root");
     public Folder currentFolder = rootFolder;
+    private UserMode mode;
     
     public Simulator() {
         this.NUM_BLOCKS = 128;
         this.blockFree = new boolean[NUM_BLOCKS];
         Arrays.fill(blockFree, true);
+        this.mode = UserMode.ADMIN; 
     }
     
     public Simulator(int num) {
         this.NUM_BLOCKS = num;
         this.blockFree = new boolean[NUM_BLOCKS];
         Arrays.fill(blockFree, true);
+        this.mode = UserMode.ADMIN;
     }
     
     /*
@@ -82,4 +91,25 @@ public class Simulator {
         currentFolder = rootFolder;
         currentFolder.deleteFolder(name, NUM_BLOCKS, blockFree);
     }
+    
+    public void setMode(UserMode mode) {
+        this.mode = mode;
+    }
+
+    public UserMode getMode() {
+        return this.mode;
+    }
+
+    private boolean isAdmin() {
+        return this.mode == UserMode.ADMIN;
+    }
+
+    private boolean checkWritePermission(String operation) {
+        if (!isAdmin()) {
+            Printer.print("Operación \"" + operation + "\" no permitida en modo USUARIO (solo lectura).");
+            return false;
+        }
+        return true;
+    }
+
 }
