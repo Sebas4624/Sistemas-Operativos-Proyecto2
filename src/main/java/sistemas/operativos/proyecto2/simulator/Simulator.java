@@ -42,14 +42,17 @@ public class Simulator {
     /* Relative */
     
     public void writeFile(String fileName, int blockSize) {
+        if (!checkWritePermission("writeFile")) return;
         currentFolder.writeFile(fileName, blockSize, NUM_BLOCKS, blockFree);
     }
     
     public void deleteFile(String fileName) {
+        if (!checkWritePermission("deleteFile")) return;
         currentFolder.deleteFile(fileName, NUM_BLOCKS, blockFree);
     }
     
     public void createFolder(String name) {
+        if (!checkWritePermission("createFolder")) return;
         currentFolder.createFolder(name);
     }
     
@@ -60,22 +63,26 @@ public class Simulator {
     }
     
     public void deleteFolder(String name) {
+        if (!checkWritePermission("deleteFolder")) return;
         currentFolder.deleteFolder(name, NUM_BLOCKS, blockFree);
     }
     
     /* From root */
     
     public void writeFileFromRoot(String fileName, int blockSize) {
+        if (!checkWritePermission("writeFileFromRoot")) return;
         currentFolder = rootFolder;
         currentFolder.writeFile(fileName, blockSize, NUM_BLOCKS, blockFree);
     }
     
     public void deleteFileFromRoot(String fileName) {
+        if (!checkWritePermission("deleteFileFromRoot")) return;
         currentFolder = rootFolder;
         currentFolder.deleteFile(fileName, NUM_BLOCKS, blockFree);
     }
     
     public void createFolderFromRoot(String name) {
+        if (!checkWritePermission("createFolderFromRoot")) return;
         currentFolder = rootFolder;
         currentFolder.createFolder(name);
     }
@@ -88,6 +95,7 @@ public class Simulator {
     }
     
     public void deleteFolderFromRoot(String name) {
+        if (!checkWritePermission("deleteFolderFromRoot")) return;
         currentFolder = rootFolder;
         currentFolder.deleteFolder(name, NUM_BLOCKS, blockFree);
     }
