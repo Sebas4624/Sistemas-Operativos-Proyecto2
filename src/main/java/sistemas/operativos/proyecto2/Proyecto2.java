@@ -39,5 +39,13 @@ public class Proyecto2 {
         
         //Printer.print(sim.rootFolder.toString());
         Printer.print(Arrays.toString(sim.blockFree));
+        
+        javax.swing.SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                MainFrame frame = new MainFrame();
+                frame.setVisible(true);
+            }
+        });
     }
 }
