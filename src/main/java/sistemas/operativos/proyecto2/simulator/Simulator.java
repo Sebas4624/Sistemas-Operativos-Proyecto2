@@ -107,6 +107,10 @@ public class Simulator {
     public UserMode getMode() {
         return this.mode;
     }
+    
+    public void currentToRoot() {
+        currentFolder = rootFolder;
+    }
 
     private boolean isAdmin() {
         return this.mode == UserMode.ADMIN;
