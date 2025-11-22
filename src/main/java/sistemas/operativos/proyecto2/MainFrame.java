@@ -1,22 +1,24 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package sistemas.operativos.proyecto2;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.Arrays;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
+import sistemas.operativos.proyecto2.file.FileMetadata;
+import sistemas.operativos.proyecto2.file.Folder;
+import sistemas.operativos.proyecto2.lib.LinkedList;
 import sistemas.operativos.proyecto2.simulator.Simulator;
 import sistemas.operativos.proyecto2.simulator.Simulator.UserMode;
+
 /**
  *
  * @author nicolepinto
  */
+
 public class MainFrame extends JFrame {
 
     private final Simulator sim;
-
     
     private JRadioButton rbAdmin;
     private JRadioButton rbUser;
@@ -29,6 +31,9 @@ public class MainFrame extends JFrame {
     private JTextField txtFileSize;
     private JTextField txtFolderName;
     private JTextArea txtOutput;
+    private Container fileExplorer;
+    private JTree tree;
+    private DefaultMutableTreeNode rootNode;
 
     public MainFrame() {
         super("Proyecto 2 - Sistema de Archivos");
@@ -36,6 +41,7 @@ public class MainFrame extends JFrame {
         initComponents();
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         pack();
+        populateSim();
         setLocationRelativeTo(null);     
     }
 
@@ -165,6 +171,11 @@ public class MainFrame extends JFrame {
         txtOutput = new JTextArea(15, 60);
         txtOutput.setEditable(false);
         JScrollPane scroll = new JScrollPane(txtOutput);
+        rootNode = new DefaultMutableTreeNode("root");
+        tree = new JTree(rootNode);
+        fileExplorer = getContentPane();
+        
+        fileExplorer.add(new JScrollPane(tree));
 
         btnShowState = new JButton("Mostrar estado");
         btnShowState.addActionListener(new java.awt.event.ActionListener() {
@@ -183,7 +194,7 @@ public class MainFrame extends JFrame {
 
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.add(northPanel, BorderLayout.NORTH);
-        mainPanel.add(scroll, BorderLayout.CENTER);
+        mainPanel.add(fileExplorer, BorderLayout.CENTER);
         mainPanel.add(btnShowState, BorderLayout.SOUTH);
 
         setContentPane(mainPanel);
@@ -213,5 +224,70 @@ public class MainFrame extends JFrame {
 
     private void showMessage(String msg) {
         JOptionPane.showMessageDialog(this, msg);
+    }
+    
+    private void addFile(DefaultMutableTreeNode node, FileMetadata reg) {
+        DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(reg.getFileName());
+        
+        node.add(newNode);
+    }
+    
+    private void addFolder(DefaultMutableTreeNode node, Folder reg) {
+        DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(reg.getName());
+        
+        LinkedList<Folder> folders = reg.getSubfolders();
+        LinkedList<FileMetadata> files = reg.getFiles();
+        
+        for (int i = 0; i < files.size(); i++) {
+            addFile(newNode, files.get(i));
+        }
+        
+        for (int i = 0; i < folders.size(); i++) {
+            addFolder(newNode, folders.get(i));
+        }
+        
+        node.add(newNode);
+    }
+    
+    private void updateJTree() {
+        DefaultTreeModel model = (DefaultTreeModel)tree.getModel();
+        DefaultMutableTreeNode rootFolder = (DefaultMutableTreeNode)model.getRoot();
+        
+        LinkedList<Folder> folders = this.sim.rootFolder.getSubfolders();
+        LinkedList<FileMetadata> files = this.sim.rootFolder.getFiles();
+        
+        for (int i = 0; i < files.size(); i++) {
+            addFile(rootFolder, files.get(i));
+        }
+        
+        for (int i = 0; i < folders.size(); i++) {
+            addFolder(rootFolder, folders.get(i));
+        }
+        
+        model.reload(rootFolder);
+    }
+    
+    /**
+     * Test Func
+     */
+    private void populateSim() {
+        sim.writeFile("Test1", 2);
+        sim.writeFile("Test2", 5);
+        sim.writeFile("Test3", 3);
+        sim.createFolder("Testeos");
+        sim.createFolder("Locos");
+        //sim.deleteFolder("Locos");
+        //sim.writeFile("Test4", 1284, "");
+        
+        //Printer.print(sim.rootFolder.toString());
+
+        //sim.deleteFile("Test2");
+        sim.getFolder("Testeos").writeFile("Test4", 3);
+        sim.getFolder("Testeos").writeFile("Test5", 4);
+        sim.getFolder("Testeos").writeFile("Test6", 1);
+        
+        sim.getFolder("Testeos").deleteFile("Test4");
+        
+        updateJTree();
     }
 }

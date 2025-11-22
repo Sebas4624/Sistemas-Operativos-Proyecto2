@@ -161,6 +161,14 @@ public class Folder {
     public HashTable getSubfolderList() { return this.subfolders; }
     public HashTable getFilesList() { return this.files; }
     
+    public LinkedList<Folder> getSubfolders() {
+        return this.subfolders.getAllValues();
+    }
+    
+    public LinkedList<FileMetadata> getFiles() {
+        return this.files.getAllValues();
+    }
+            
     public void setName(String newName) {
         this.name = newName;
     }
