@@ -1,5 +1,8 @@
 package sistemas.operativos.proyecto2;
 
+import java.util.Arrays;
+import java.util.Date;
+import javax.swing.event.TreeSelectionEvent;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import sistemas.operativos.proyecto2.file.FileMetadata;
@@ -13,19 +16,48 @@ import sistemas.operativos.proyecto2.utils.Printer;
  *
  * @author sebas
  */
-public class UIMain extends javax.swing.JFrame {
+public final class UIMain extends javax.swing.JFrame {
+    public enum ElementType {
+        FILE,
+        FOLDER
+    }
+    
+    private class TreeNodeSelection {
+        public String name;
+        public int size;
+        public LinkedList<Integer> indices;
+        public ElementType type;
+        public long creation;
+        public long lastModified;
+        
+        public TreeNodeSelection(String name, int size, LinkedList<Integer> indices, ElementType type, long creation, long lastModified) {
+            this.name = name;
+            this.size = size;
+            this.indices = indices;
+            this.type = type;
+            this.creation = creation;
+            this.lastModified = lastModified;
+        }
+    }
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(UIMain.class.getName());
     
     private final Simulator sim;
+    
+    private TreeNodeSelection selected;
 
     /**
      * Creates new form UIMain
      */
     public UIMain() {
         initComponents();
+        initEvents();
         
         this.sim = new Simulator();
+        
+        Folder rootStart = this.sim.getCurrentFolder();
+        this.selected = new TreeNodeSelection(rootStart.getName(), 0, null, ElementType.FOLDER, rootStart.getCreationTime(), rootStart.getLastModifiedTime());
+        updateSelectedElement();
         
         this.sim.setMode(UserMode.USER);
         updateMode();
@@ -60,6 +92,19 @@ public class UIMain extends javax.swing.JFrame {
         folderName = new javax.swing.JTextField();
         folderButton = new javax.swing.JToggleButton();
         jPanel6 = new javax.swing.JPanel();
+        jLabel7 = new javax.swing.JLabel();
+        elementSize = new javax.swing.JLabel();
+        elementNameInput = new javax.swing.JTextField();
+        elementName = new javax.swing.JLabel();
+        elementSizeInput = new javax.swing.JTextField();
+        elementName1 = new javax.swing.JLabel();
+        elementTypeInput = new javax.swing.JTextField();
+        elementName2 = new javax.swing.JLabel();
+        elementCreatedInput = new javax.swing.JTextField();
+        elementName3 = new javax.swing.JLabel();
+        elementModifiedInput = new javax.swing.JTextField();
+        elementName4 = new javax.swing.JLabel();
+        elementIndicesInput = new javax.swing.JTextField();
         jScrollPane1 = new javax.swing.JScrollPane();
         explorerJTree = new javax.swing.JTree();
 
@@ -276,7 +321,7 @@ public class UIMain extends javax.swing.JFrame {
                 .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(325, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -288,17 +333,148 @@ public class UIMain extends javax.swing.JFrame {
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
-        jPanel6.setBackground(new java.awt.Color(51, 51, 51));
+        jPanel6.setBackground(new java.awt.Color(102, 102, 102));
+
+        jLabel7.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        jLabel7.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel7.setText("Elemento Actual");
+
+        elementSize.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        elementSize.setForeground(new java.awt.Color(255, 255, 255));
+        elementSize.setText("Tamaño (bloques)");
+
+        elementNameInput.setBackground(new java.awt.Color(51, 51, 51));
+        elementNameInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementNameInput.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                elementNameInputActionPerformed(evt);
+            }
+        });
+
+        elementName.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        elementName.setForeground(new java.awt.Color(255, 255, 255));
+        elementName.setText("Nombre");
+
+        elementSizeInput.setBackground(new java.awt.Color(51, 51, 51));
+        elementSizeInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementSizeInput.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                elementSizeInputActionPerformed(evt);
+            }
+        });
+
+        elementName1.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        elementName1.setForeground(new java.awt.Color(255, 255, 255));
+        elementName1.setText("Tipo de elemento");
+
+        elementTypeInput.setBackground(new java.awt.Color(51, 51, 51));
+        elementTypeInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementTypeInput.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                elementTypeInputActionPerformed(evt);
+            }
+        });
+
+        elementName2.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        elementName2.setForeground(new java.awt.Color(255, 255, 255));
+        elementName2.setText("Creado");
+
+        elementCreatedInput.setBackground(new java.awt.Color(51, 51, 51));
+        elementCreatedInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementCreatedInput.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                elementCreatedInputActionPerformed(evt);
+            }
+        });
+
+        elementName3.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        elementName3.setForeground(new java.awt.Color(255, 255, 255));
+        elementName3.setText("Editado");
+
+        elementModifiedInput.setBackground(new java.awt.Color(51, 51, 51));
+        elementModifiedInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementModifiedInput.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                elementModifiedInputActionPerformed(evt);
+            }
+        });
+
+        elementName4.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        elementName4.setForeground(new java.awt.Color(255, 255, 255));
+        elementName4.setText("Índices");
+
+        elementIndicesInput.setBackground(new java.awt.Color(51, 51, 51));
+        elementIndicesInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementIndicesInput.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                elementIndicesInputActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
         jPanel6.setLayout(jPanel6Layout);
         jPanel6Layout.setHorizontalGroup(
             jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 0, Short.MAX_VALUE)
+            .addGroup(jPanel6Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addComponent(elementName, javax.swing.GroupLayout.PREFERRED_SIZE, 56, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(elementNameInput))
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addComponent(elementName1)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(elementTypeInput))
+                    .addComponent(jLabel7)
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addComponent(elementSize)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(elementSizeInput, javax.swing.GroupLayout.PREFERRED_SIZE, 179, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel6Layout.createSequentialGroup()
+                        .addComponent(elementName2)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(elementCreatedInput))
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addComponent(elementName3)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(elementModifiedInput))
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addComponent(elementName4)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(elementIndicesInput)))
+                .addContainerGap())
         );
         jPanel6Layout.setVerticalGroup(
             jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 0, Short.MAX_VALUE)
+            .addGroup(jPanel6Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel7)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(elementName)
+                    .addComponent(elementNameInput, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(elementSize)
+                    .addComponent(elementSizeInput, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(elementName4)
+                    .addComponent(elementIndicesInput, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(elementName1)
+                    .addComponent(elementTypeInput, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(elementName2)
+                    .addComponent(elementCreatedInput, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(elementName3)
+                    .addComponent(elementModifiedInput, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         explorerJTree.setBackground(new java.awt.Color(255, 255, 255));
@@ -382,6 +558,30 @@ public class UIMain extends javax.swing.JFrame {
         createFolder();
     }//GEN-LAST:event_folderButtonActionPerformed
 
+    private void elementNameInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_elementNameInputActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_elementNameInputActionPerformed
+
+    private void elementSizeInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_elementSizeInputActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_elementSizeInputActionPerformed
+
+    private void elementTypeInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_elementTypeInputActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_elementTypeInputActionPerformed
+
+    private void elementCreatedInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_elementCreatedInputActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_elementCreatedInputActionPerformed
+
+    private void elementModifiedInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_elementModifiedInputActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_elementModifiedInputActionPerformed
+
+    private void elementIndicesInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_elementIndicesInputActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_elementIndicesInputActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -440,11 +640,15 @@ public class UIMain extends javax.swing.JFrame {
     private void addFile(DefaultMutableTreeNode node, FileMetadata reg) {
         DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(reg.getFileName());
         
+        newNode.setAllowsChildren(false);
+        
         node.add(newNode);
     }
     
     private void addFolder(DefaultMutableTreeNode node, Folder reg) {
         DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(reg.getName());
+        
+        newNode.setAllowsChildren(true);
         
         LinkedList<Folder> folders = reg.getSubfolders();
         LinkedList<FileMetadata> files = reg.getFiles();
@@ -516,9 +720,88 @@ public class UIMain extends javax.swing.JFrame {
             }
         }
     }
+    
+    public void updateSelectedElement() {
+        this.elementNameInput.setText(this.selected.name);
+        this.elementSizeInput.setText(String.valueOf(this.selected.size));
+        
+        if (this.selected.indices != null) {
+            this.elementIndicesInput.setText(this.selected.indices.toString());
+        } else {
+            this.elementIndicesInput.setText("No hay indices");
+        }
+        
+        switch(this.selected.type) {
+            case ElementType.FILE -> {
+                this.elementTypeInput.setText("Archivo");
+            }
+            case ElementType.FOLDER -> {
+                this.elementTypeInput.setText("Carpeta");
+            }
+            default -> {
+                this.elementTypeInput.setText("Desconocido");
+            }
+        }
+                
+        this.elementCreatedInput.setText(new Date(this.selected.creation).toString());
+        this.elementModifiedInput.setText(new Date(this.selected.lastModified).toString());
+    }
+    
+    /*
+     *   Eventos
+     */
+    
+    public void initEvents() {
+        
+        // JTree Event
+        explorerJTree.getSelectionModel().addTreeSelectionListener((TreeSelectionEvent e) -> {
+            DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) explorerJTree.getLastSelectedPathComponent();
+            
+            if (selectedNode != null) {
+                int maxPathLength = selectedNode.getUserObjectPath().length;
+                Folder selectionFolder = this.sim.rootFolder;
+                FileMetadata selectionFile = null;
+                this.sim.currentToRoot();
+                
+                if (selectedNode.getAllowsChildren()) {                    
+                    for (int i = 1; i < maxPathLength; i++) {
+                        selectionFolder = this.sim.getFolder(selectedNode.getUserObjectPath()[i].toString()).getCurrentFolder();
+                    }
+                    
+                    this.selected = new TreeNodeSelection(selectionFolder.getName(), 0, null, ElementType.FOLDER, selectionFolder.getCreationTime(), selectionFolder.getLastModifiedTime());
+                } else {
+                    for (int i = 1; i < maxPathLength - 1; i++) {
+                        selectionFolder = this.sim.getFolder(selectedNode.getUserObjectPath()[i].toString()).getCurrentFolder();
+                    }
+                    
+                    selectionFile = selectionFolder.getFile(selectedNode.getUserObjectPath()[maxPathLength - 1].toString());
+                    
+                    this.selected = new TreeNodeSelection(selectionFile.getFileName(), selectionFile.getFileSize(), selectionFile.getBlockIndices(), ElementType.FILE, selectionFile.getCreationTime(), selectionFile.getLastModifiedTime());
+                }
+                
+                updateSelectedElement();
+                
+                Printer.print(selectedNode.getUserObject().toString());
+                Printer.print(Arrays.toString(selectedNode.getUserObjectPath()));
+                Printer.print(selectedNode.getAllowsChildren()); // Chequea si puede tener hijos o no (si es carpeta o archivo)
+            }
+        });
+    }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JRadioButton adminButton;
+    private javax.swing.JTextField elementCreatedInput;
+    private javax.swing.JTextField elementIndicesInput;
+    private javax.swing.JTextField elementModifiedInput;
+    private javax.swing.JLabel elementName;
+    private javax.swing.JLabel elementName1;
+    private javax.swing.JLabel elementName2;
+    private javax.swing.JLabel elementName3;
+    private javax.swing.JLabel elementName4;
+    private javax.swing.JTextField elementNameInput;
+    private javax.swing.JLabel elementSize;
+    private javax.swing.JTextField elementSizeInput;
+    private javax.swing.JTextField elementTypeInput;
     private javax.swing.JTree explorerJTree;
     private javax.swing.JToggleButton fileButton;
     private javax.swing.JTextField fileName;
@@ -531,6 +814,7 @@ public class UIMain extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
