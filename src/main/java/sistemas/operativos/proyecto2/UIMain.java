@@ -3,6 +3,7 @@ package sistemas.operativos.proyecto2;
 import java.util.Arrays;
 import java.util.Date;
 import javax.swing.event.TreeSelectionEvent;
+import javax.swing.table.DefaultTableModel;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import sistemas.operativos.proyecto2.file.FileMetadata;
@@ -45,6 +46,7 @@ public final class UIMain extends javax.swing.JFrame {
     private final Simulator sim;
     
     private TreeNodeSelection selected;
+    private LinkedList<FileMetadata> fileTableList;
 
     /**
      * Creates new form UIMain
@@ -57,6 +59,7 @@ public final class UIMain extends javax.swing.JFrame {
         
         Folder rootStart = this.sim.getCurrentFolder();
         this.selected = new TreeNodeSelection(rootStart.getName(), 0, null, ElementType.FOLDER, rootStart.getCreationTime(), rootStart.getLastModifiedTime());
+        this.fileTableList = new LinkedList();
         updateSelectedElement();
         
         this.sim.setMode(UserMode.USER);
@@ -107,6 +110,8 @@ public final class UIMain extends javax.swing.JFrame {
         elementIndicesInput = new javax.swing.JTextField();
         jScrollPane1 = new javax.swing.JScrollPane();
         explorerJTree = new javax.swing.JTree();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        fileJTable = new javax.swing.JTable();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -321,7 +326,7 @@ public final class UIMain extends javax.swing.JFrame {
                 .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(430, Short.MAX_VALUE))
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -426,11 +431,6 @@ public final class UIMain extends javax.swing.JFrame {
                         .addComponent(elementName1)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(elementTypeInput))
-                    .addComponent(jLabel7)
-                    .addGroup(jPanel6Layout.createSequentialGroup()
-                        .addComponent(elementSize)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(elementSizeInput, javax.swing.GroupLayout.PREFERRED_SIZE, 179, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel6Layout.createSequentialGroup()
                         .addComponent(elementName2)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -442,7 +442,14 @@ public final class UIMain extends javax.swing.JFrame {
                     .addGroup(jPanel6Layout.createSequentialGroup()
                         .addComponent(elementName4)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(elementIndicesInput)))
+                        .addComponent(elementIndicesInput))
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addComponent(jLabel7)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addComponent(elementSize)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(elementSizeInput)))
                 .addContainerGap())
         );
         jPanel6Layout.setVerticalGroup(
@@ -483,6 +490,39 @@ public final class UIMain extends javax.swing.JFrame {
         explorerJTree.setModel(new javax.swing.tree.DefaultTreeModel(treeNode1));
         jScrollPane1.setViewportView(explorerJTree);
 
+        fileJTable.setBackground(new java.awt.Color(255, 255, 255));
+        fileJTable.setForeground(new java.awt.Color(51, 51, 51));
+        fileJTable.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null},
+                {null, null, null},
+                {null, null, null},
+                {null, null, null},
+                {null, null, null}
+            },
+            new String [] {
+                "Nombre", "Tamaño", "Índices"
+            }
+        ) {
+            Class[] types = new Class [] {
+                java.lang.String.class, java.lang.String.class, java.lang.String.class
+            };
+            boolean[] canEdit = new boolean [] {
+                false, false, false
+            };
+
+            public Class getColumnClass(int columnIndex) {
+                return types [columnIndex];
+            }
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        fileJTable.setSelectionBackground(new java.awt.Color(102, 102, 102));
+        fileJTable.setSelectionForeground(new java.awt.Color(255, 255, 255));
+        jScrollPane2.setViewportView(fileJTable);
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -490,7 +530,9 @@ public final class UIMain extends javax.swing.JFrame {
             .addComponent(jPanel2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 522, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 270, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 356, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jPanel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
@@ -503,7 +545,10 @@ public final class UIMain extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jPanel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jScrollPane1)))
+                    .addComponent(jScrollPane1)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGap(0, 0, Short.MAX_VALUE)
+                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 437, javax.swing.GroupLayout.PREFERRED_SIZE))))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -621,6 +666,7 @@ public final class UIMain extends javax.swing.JFrame {
             int size = Integer.parseInt(sizeStr);
             sim.writeFile(name, size);
             updateJTree();
+            updateJTable();
         } catch (NumberFormatException ex) {
             System.out.println(ex);
         }
@@ -631,6 +677,7 @@ public final class UIMain extends javax.swing.JFrame {
         if (name.isEmpty()) { return; }
         sim.createFolder(name);
         updateJTree();
+        updateJTable();
     }
     
     /*
@@ -667,6 +714,46 @@ public final class UIMain extends javax.swing.JFrame {
     /*
      *   Updates
      */
+    
+    private void updateJTableHelper(Folder reg) {
+        LinkedList<Folder> folders = reg.getSubfolders();
+        LinkedList<FileMetadata> files = reg.getFiles();
+        
+        for (int i = 0; i < folders.size(); i++) {
+            updateJTableHelper(folders.get(i));
+        }
+        
+        for (int i = 0; i < files.size(); i++) {
+            fileTableList.add(files.get(i));
+        }
+    }
+    
+    private void updateJTable() {
+        DefaultTableModel model = (DefaultTableModel) fileJTable.getModel();
+        
+        for (int i = fileTableList.size() - 1; i >= 0; i--) {
+            model.removeRow(i);
+        }
+        
+        this.fileTableList = new LinkedList();
+        
+        LinkedList<Folder> folders = this.sim.rootFolder.getSubfolders();
+        LinkedList<FileMetadata> files = this.sim.rootFolder.getFiles();
+        
+        for (int i = 0; i < folders.size(); i++) {
+            updateJTableHelper(folders.get(i));
+        }
+        
+        for (int i = 0; i < files.size(); i++) {
+            fileTableList.add(files.get(i));
+        }
+        
+        for (int i = 0; i < fileTableList.size(); i++) {
+            FileMetadata item = fileTableList.get(i);
+            
+            model.insertRow(0, new Object[]{ item.getFileName(), String.valueOf(item.getFileSize()), item.getBlockIndices().toString() });
+        }
+    }
     
     private void updateJTree() {
         DefaultTreeModel model = (DefaultTreeModel) explorerJTree.getModel();
@@ -760,7 +847,7 @@ public final class UIMain extends javax.swing.JFrame {
             if (selectedNode != null) {
                 int maxPathLength = selectedNode.getUserObjectPath().length;
                 Folder selectionFolder = this.sim.rootFolder;
-                FileMetadata selectionFile = null;
+                FileMetadata selectionFile;
                 this.sim.currentToRoot();
                 
                 if (selectedNode.getAllowsChildren()) {                    
@@ -804,6 +891,7 @@ public final class UIMain extends javax.swing.JFrame {
     private javax.swing.JTextField elementTypeInput;
     private javax.swing.JTree explorerJTree;
     private javax.swing.JToggleButton fileButton;
+    private javax.swing.JTable fileJTable;
     private javax.swing.JTextField fileName;
     private javax.swing.JTextField fileSize;
     private javax.swing.JToggleButton folderButton;
@@ -822,6 +910,7 @@ public final class UIMain extends javax.swing.JFrame {
     private javax.swing.JPanel jPanel5;
     private javax.swing.JPanel jPanel6;
     private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.ButtonGroup modeGroup;
     private javax.swing.JRadioButton userButton;
     // End of variables declaration//GEN-END:variables
