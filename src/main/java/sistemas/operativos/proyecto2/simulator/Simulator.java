@@ -39,6 +39,10 @@ public class Simulator {
      *   Simulator Methods
      */
     
+    public Folder getCurrentFolder() {
+        return this.currentFolder;
+    }
+    
     /* Relative */
     
     public void writeFile(String fileName, int blockSize) {
@@ -100,12 +104,20 @@ public class Simulator {
         currentFolder.deleteFolder(name, NUM_BLOCKS, blockFree);
     }
     
+    /*
+     *   Misc
+     */
+    
     public void setMode(UserMode mode) {
         this.mode = mode;
     }
 
     public UserMode getMode() {
         return this.mode;
+    }
+    
+    public void currentToRoot() {
+        currentFolder = rootFolder;
     }
 
     private boolean isAdmin() {

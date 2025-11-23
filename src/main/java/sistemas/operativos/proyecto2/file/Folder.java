@@ -12,11 +12,15 @@ public class Folder {
     private String name;
     final private HashTable<Folder> subfolders;
     final private HashTable<FileMetadata> files;
+    final private long creationTime;
+    private long lastModifiedTime;
 
     public Folder(String name) {
         this.name = name;
         this.subfolders = new HashTable(16);
         this.files = new HashTable(16);
+        this.creationTime = System.currentTimeMillis();
+        this.lastModifiedTime = this.creationTime;
     }
     
     public void createFolder(String name) {
@@ -160,9 +164,35 @@ public class Folder {
     public String getName() { return this.name; }
     public HashTable getSubfolderList() { return this.subfolders; }
     public HashTable getFilesList() { return this.files; }
+    public long getCreationTime() { return this.creationTime; }
+    public long getLastModifiedTime() { return this.lastModifiedTime; }
     
+    public LinkedList<Folder> getSubfolders() {
+        return this.subfolders.getAllValues();
+    }
+    
+    public LinkedList<FileMetadata> getFiles() {
+        return this.files.getAllValues();
+    }
+    
+    public FileMetadata getFile(String name) {
+        LinkedList<FileMetadata> list = this.files.getAllValues();
+        
+        for (int i = 0; i < list.size(); i++) {
+            if (list.get(i).getFileName() == null ? name == null : list.get(i).getFileName().equals(name)) {
+                return list.get(i);
+            }
+        }
+        
+        return null;
+    }
+            
     public void setName(String newName) {
         this.name = newName;
+    }
+    
+    public void setLastModifiedTime(long newTime) {
+        this.lastModifiedTime = newTime;
     }
     
     @Override
