@@ -30,8 +30,8 @@ public class Folder {
     }
     
     public Folder getFolder(String name) {
-        LinkedList<Folder> resList = this.subfolders.getKeyList(name);
-        Folder selected = null;
+        LinkedList<Folder> resList = this.subfolders.getAllValues();
+        Folder selected = this;
         
         for (int i = 0; i < resList.size(); i++) {
             Folder res = resList.get(i);

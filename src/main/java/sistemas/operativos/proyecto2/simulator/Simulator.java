@@ -50,6 +50,12 @@ public class Simulator {
         currentFolder.writeFile(fileName, blockSize, NUM_BLOCKS, blockFree);
     }
     
+    public void modifyFile(String fileName, String newName) {
+        if (!checkWritePermission("modifyFile")) return;
+        currentFolder.getFile(fileName).setLastModifiedTime(System.currentTimeMillis());
+        currentFolder.getFile(fileName).setFileName(newName);
+    }
+    
     public void deleteFile(String fileName) {
         if (!checkWritePermission("deleteFile")) return;
         currentFolder.deleteFile(fileName, NUM_BLOCKS, blockFree);
@@ -64,6 +70,12 @@ public class Simulator {
         Folder newFolder = currentFolder.getFolder(name);
         if (newFolder != null) currentFolder = newFolder;
         return this;
+    }
+    
+    public void modifyFolder(String name) {
+        if (!checkWritePermission("modifyFolder")) return;
+        currentFolder.setLastModifiedTime(System.currentTimeMillis());
+        currentFolder.setName(name);
     }
     
     public void deleteFolder(String name) {
