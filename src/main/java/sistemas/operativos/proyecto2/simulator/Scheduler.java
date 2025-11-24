@@ -1,9 +1,9 @@
 package sistemas.operativos.proyecto2.simulator;
 
+import java.util.Random;
 import sistemas.operativos.proyecto2.lib.LinkedList;
 import sistemas.operativos.proyecto2.lib.Queue;
 import sistemas.operativos.proyecto2.simulator.process.Process;
-import java.util.Random;
 import sistemas.operativos.proyecto2.simulator.config.Config;
 import sistemas.operativos.proyecto2.simulator.process.CRUD;
 import sistemas.operativos.proyecto2.simulator.process.Element;

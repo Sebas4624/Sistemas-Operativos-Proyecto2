@@ -1,6 +1,7 @@
 package sistemas.operativos.proyecto2.simulator;
 
 import java.util.Arrays;
+import java.util.function.Consumer;
 import sistemas.operativos.proyecto2.file.Folder;
 import sistemas.operativos.proyecto2.simulator.config.Config;
 import sistemas.operativos.proyecto2.simulator.config.Policy;
@@ -30,6 +31,9 @@ public class Simulator {
     public Folder rootFolder = new Folder("root");
     public Folder currentFolder = rootFolder;
     private UserMode mode;
+    
+    private Consumer<Void> updateJTreeFunction;
+    private Consumer<Void> updateJTableFunction;
     
     public Simulator(Config config) {
         if (config.getNumBlocks() < 64) {
@@ -70,6 +74,9 @@ public class Simulator {
                         if (this.sched.getCurrentProcess() != null && this.sched.getCurrentProcess().isRunning()) {                        
                             this.executeCRUD();
                             this.sched.getCurrentProcess().setFinished();
+                            
+                            this.executeUpdateJTable();
+                            this.executeUpdateJTree();
                         }
                     }
                 }
@@ -86,6 +93,9 @@ public class Simulator {
                         if (this.sched.getCurrentProcess() != null && this.sched.getCurrentProcess().isRunning()) {                        
                             this.executeCRUD();
                             this.sched.getCurrentProcess().setFinished();
+                            
+                            this.executeUpdateJTable();
+                            this.executeUpdateJTree();
                         }
                     }
                 }
@@ -102,6 +112,9 @@ public class Simulator {
                         if (this.sched.getCurrentProcess() != null && this.sched.getCurrentProcess().isRunning()) {                        
                             this.executeCRUD();
                             this.sched.getCurrentProcess().setFinished();
+                            
+                            this.executeUpdateJTable();
+                            this.executeUpdateJTree();
                         }
                     }
                 }
@@ -118,6 +131,9 @@ public class Simulator {
                         if (this.sched.getCurrentProcess() != null && this.sched.getCurrentProcess().isRunning()) {                        
                             this.executeCRUD();
                             this.sched.getCurrentProcess().setFinished();
+                            
+                            this.executeUpdateJTable();
+                            this.executeUpdateJTree();
                         }
                     }
                 }
@@ -135,11 +151,8 @@ public class Simulator {
         switch (this.sched.getCurrentProcess().getCRUD()) {
             
             case CRUD.CREATE -> {
-                Printer.print("CREATE");
                 switch(current.getElementType()) {
                     case Element.Type.FILE -> {
-                        Printer.print("File");
-                        Printer.print(Arrays.toString(current.getElementPath()));
                         for (int i = 0; i < current.getElementPath().length; i++) {
                             if (i == current.getElementPath().length - 1) {
                                 this.getFolder(current.getElementPath()[i]).writeFile(current.getElementName(), current.getElementBlocks());
@@ -181,7 +194,7 @@ public class Simulator {
                     }
                     case Element.Type.FOLDER -> {
                         for (int i = 0; i < current.getElementPath().length; i++) {
-                            if (i == current.getElementPath().length - 1) {
+                            if (i == current.getElementPath().length - 1 && !"root".equals(current.getElementName())) {
                                 this.getFolder(current.getElementPath()[i]).modifyFolder(current.getElementName());
                             } else {
                                 this.getFolder(current.getElementPath()[i]);
@@ -210,8 +223,8 @@ public class Simulator {
                     }
                     case Element.Type.FOLDER -> {
                         for (int i = 0; i < current.getElementPath().length; i++) {
-                            if (i == current.getElementPath().length - 1) {
-                                this.getFolder(current.getElementPath()[i]).deleteFolder(current.getElementName());
+                            if (i == current.getElementPath().length - 1 && !"root".equals(current.getElementName())) {
+                                this.deleteFolder(current.getElementName());
                             } else {
                                 this.getFolder(current.getElementPath()[i]);
                             }
@@ -296,6 +309,34 @@ public class Simulator {
     public void deleteFolder(String name) {
         if (!checkWritePermission("deleteFolder")) return;
         currentFolder.deleteFolder(name, NUM_BLOCKS, blockFree);
+    }
+    
+    /*
+     *   Updates
+     */
+    
+    // JTree
+    
+    public void setUpdateJTreeFunction(Consumer<Void> updateFunction) {
+        this.updateJTreeFunction = updateFunction;
+    }
+    
+    public void executeUpdateJTree() {
+        if (updateJTreeFunction != null) {
+            updateJTreeFunction.accept(null);
+        }
+    }
+    
+    // JTable
+    
+    public void setUpdateJTableFunction(Consumer<Void> updateFunction) {
+        this.updateJTableFunction = updateFunction;
+    }
+    
+    public void executeUpdateJTable() {
+        if (updateJTableFunction != null) {
+            updateJTableFunction.accept(null);
+        }
     }
     
     /*

@@ -69,6 +69,9 @@ public final class UIMain extends javax.swing.JFrame {
         this.selected = new TreeNodeSelection(rootStart.getName(), 0, null, ElementType.FOLDER, rootStart.getCreationTime(), rootStart.getLastModifiedTime(), rootPath);
         this.fileTableList = new LinkedList();
         
+        passJTreeToSimulator();
+        passJTableToSimulator();
+        
         this.sim.setMode(UserMode.USER);
         updateMode();
         
@@ -115,6 +118,8 @@ public final class UIMain extends javax.swing.JFrame {
         jLabel9 = new javax.swing.JLabel();
         elementEditName = new javax.swing.JTextField();
         modifyButton = new javax.swing.JToggleButton();
+        editPriority = new javax.swing.JTextField();
+        jLabel17 = new javax.swing.JLabel();
         jPanel6 = new javax.swing.JPanel();
         jLabel7 = new javax.swing.JLabel();
         elementSize = new javax.swing.JLabel();
@@ -130,6 +135,8 @@ public final class UIMain extends javax.swing.JFrame {
         elementName4 = new javax.swing.JLabel();
         elementIndicesInput = new javax.swing.JTextField();
         deleteButton = new javax.swing.JToggleButton();
+        deletePriority = new javax.swing.JTextField();
+        jLabel18 = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
         explorerJTree = new javax.swing.JTree();
         jScrollPane2 = new javax.swing.JScrollPane();
@@ -262,7 +269,7 @@ public final class UIMain extends javax.swing.JFrame {
 
         jLabel16.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         jLabel16.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel16.setText("Priority");
+        jLabel16.setText("Prioridad");
 
         javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
         jPanel4.setLayout(jPanel4Layout);
@@ -420,6 +427,18 @@ public final class UIMain extends javax.swing.JFrame {
             }
         });
 
+        editPriority.setBackground(new java.awt.Color(51, 51, 51));
+        editPriority.setForeground(new java.awt.Color(255, 255, 255));
+        editPriority.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                editPriorityActionPerformed(evt);
+            }
+        });
+
+        jLabel17.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel17.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel17.setText("Prioridad");
+
         javax.swing.GroupLayout jPanel7Layout = new javax.swing.GroupLayout(jPanel7);
         jPanel7.setLayout(jPanel7Layout);
         jPanel7Layout.setHorizontalGroup(
@@ -434,7 +453,11 @@ public final class UIMain extends javax.swing.JFrame {
                         .addComponent(jLabel9, javax.swing.GroupLayout.PREFERRED_SIZE, 56, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addComponent(elementEditName))
-                    .addComponent(modifyButton, javax.swing.GroupLayout.DEFAULT_SIZE, 217, Short.MAX_VALUE))
+                    .addComponent(modifyButton, javax.swing.GroupLayout.DEFAULT_SIZE, 217, Short.MAX_VALUE)
+                    .addGroup(jPanel7Layout.createSequentialGroup()
+                        .addComponent(jLabel17)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(editPriority)))
                 .addContainerGap())
         );
         jPanel7Layout.setVerticalGroup(
@@ -446,6 +469,10 @@ public final class UIMain extends javax.swing.JFrame {
                 .addGroup(jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel9)
                     .addComponent(elementEditName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel17)
+                    .addComponent(editPriority, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(modifyButton)
                 .addContainerGap())
@@ -571,6 +598,18 @@ public final class UIMain extends javax.swing.JFrame {
             }
         });
 
+        deletePriority.setBackground(new java.awt.Color(51, 51, 51));
+        deletePriority.setForeground(new java.awt.Color(255, 255, 255));
+        deletePriority.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                deletePriorityActionPerformed(evt);
+            }
+        });
+
+        jLabel18.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel18.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel18.setText("Prioridad");
+
         javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
         jPanel6.setLayout(jPanel6Layout);
         jPanel6Layout.setHorizontalGroup(
@@ -605,7 +644,11 @@ public final class UIMain extends javax.swing.JFrame {
                     .addGroup(jPanel6Layout.createSequentialGroup()
                         .addComponent(jLabel7)
                         .addGap(0, 0, Short.MAX_VALUE))
-                    .addComponent(deleteButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(deleteButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addComponent(jLabel18)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(deletePriority)))
                 .addContainerGap())
         );
         jPanel6Layout.setVerticalGroup(
@@ -637,9 +680,13 @@ public final class UIMain extends javax.swing.JFrame {
                 .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(elementName3)
                     .addComponent(elementModifiedInput, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 45, Short.MAX_VALUE)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel18)
+                    .addComponent(deletePriority, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(deleteButton)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap())
         );
 
         explorerJTree.setBackground(new java.awt.Color(255, 255, 255));
@@ -763,7 +810,7 @@ public final class UIMain extends javax.swing.JFrame {
                     .addComponent(jLabel14, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane4, javax.swing.GroupLayout.DEFAULT_SIZE, 239, Short.MAX_VALUE)
+                    .addComponent(jScrollPane4)
                     .addComponent(jScrollPane3))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
@@ -837,21 +884,19 @@ public final class UIMain extends javax.swing.JFrame {
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                             .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(jPanel11, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
-                            .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                        .addComponent(jPanel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jPanel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
+                    .addComponent(jPanel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
 
@@ -900,9 +945,14 @@ public final class UIMain extends javax.swing.JFrame {
     private void fileButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_fileButtonActionPerformed
         // TODO add your handling code here:
         //createFile();
+        if (fileSize.getText().trim().isEmpty()) return;
+        if (filePriority.getText().trim().isEmpty()) return;
+        
         String name = fileName.getText().trim();
         int size = Integer.parseInt(fileSize.getText().trim());
         int priority = Integer.parseInt(filePriority.getText().trim());
+        
+        if (name.isEmpty() || size < 1 || priority < 0) return;
         
         createCRUDProcess(name, size, priority, Element.Type.FILE, selected.path, CRUD.CREATE);
     }//GEN-LAST:event_fileButtonActionPerformed
@@ -910,10 +960,13 @@ public final class UIMain extends javax.swing.JFrame {
     private void folderButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_folderButtonActionPerformed
         // TODO add your handling code here:
         //createFolder();
+        if (folderPriority.getText().trim().isEmpty()) return;
         
         String name = folderName.getText().trim();
-        int size = 0;
+        int size = 1;
         int priority = Integer.parseInt(folderPriority.getText().trim());
+        
+        if (name.isEmpty() || size < 1 || priority < 0) return;
         
         createCRUDProcess(name, size, priority, Element.Type.FOLDER, selected.path, CRUD.CREATE);
     }//GEN-LAST:event_folderButtonActionPerformed
@@ -944,7 +997,24 @@ public final class UIMain extends javax.swing.JFrame {
 
     private void modifyButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_modifyButtonActionPerformed
         // TODO add your handling code here:
-        modifyElement();
+        //modifyElement();
+        if (editPriority.getText().trim().isEmpty()) return;
+        
+        String name = elementEditName.getText().trim();
+        Element.Type type;
+        int size = selected.size;
+        int priority = Integer.parseInt(editPriority.getText().trim());
+        
+        if (selected.type == ElementType.FILE) {
+            type = Element.Type.FILE;
+        } else {
+            type = Element.Type.FOLDER;
+        }
+        
+        if (name.isEmpty() || priority < 0) return;
+        if ((type == Element.Type.FILE && priority < 1) || (type == Element.Type.FOLDER && priority < 0)) return;
+        
+        createCRUDProcess(name, size, priority, type, selected.path, CRUD.UPDATE);
     }//GEN-LAST:event_modifyButtonActionPerformed
 
     private void elementEditNameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_elementEditNameActionPerformed
@@ -953,7 +1023,24 @@ public final class UIMain extends javax.swing.JFrame {
 
     private void deleteButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteButtonActionPerformed
         // TODO add your handling code here:
-        deleteElement();
+        //deleteElement();
+        if (deletePriority.getText().trim().isEmpty()) return;
+        
+        String name = selected.name;
+        Element.Type type;
+        int size = selected.size;
+        int priority = Integer.parseInt(deletePriority.getText().trim());
+        
+        if (selected.type == ElementType.FILE) {
+            type = Element.Type.FILE;
+        } else {
+            type = Element.Type.FOLDER;
+        }
+        
+        if (name.isEmpty() || priority < 0) return;
+        if ((type == Element.Type.FILE && priority < 1) || (type == Element.Type.FOLDER && priority < 0)) return;
+        
+        createCRUDProcess(name, size, priority, type, selected.path, CRUD.DELETE);
     }//GEN-LAST:event_deleteButtonActionPerformed
 
     private void executingFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_executingFieldActionPerformed
@@ -983,6 +1070,14 @@ public final class UIMain extends javax.swing.JFrame {
     private void filePriorityActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_filePriorityActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_filePriorityActionPerformed
+
+    private void editPriorityActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_editPriorityActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_editPriorityActionPerformed
+
+    private void deletePriorityActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deletePriorityActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_deletePriorityActionPerformed
 
     /**
      * @param args the command line arguments
@@ -1092,7 +1187,7 @@ public final class UIMain extends javax.swing.JFrame {
      *   Borrar archivos y carpetas
      */
     
-    private void deleteElement() {
+    public void deleteElement() {
         String newName = selected.name;
         if (newName.isEmpty() || "root".equals(newName)) { return; }
         
@@ -1175,7 +1270,7 @@ public final class UIMain extends javax.swing.JFrame {
         }
     }
     
-    private void updateJTable() {
+    public void updateJTable() {
         DefaultTableModel model = (DefaultTableModel) fileJTable.getModel();
 
         for (int i = fileTableList.size() - 1; i >= 0; i--) {
@@ -1202,7 +1297,7 @@ public final class UIMain extends javax.swing.JFrame {
         }
     }
     
-    private void updateJTree() {
+    public void updateJTree() {
         DefaultTreeModel model = (DefaultTreeModel) explorerJTree.getModel();
         DefaultMutableTreeNode rootFolder = (DefaultMutableTreeNode)model.getRoot();
 
@@ -1235,6 +1330,8 @@ public final class UIMain extends javax.swing.JFrame {
                 folderName.setEnabled(true);
                 folderPriority.setEnabled(true);
                 elementEditName.setEnabled(true);
+                editPriority.setEnabled(true);
+                deletePriority.setEnabled(true);
                 
                 fileButton.setEnabled(true);
                 folderButton.setEnabled(true);
@@ -1248,6 +1345,8 @@ public final class UIMain extends javax.swing.JFrame {
                 folderName.setEnabled(false);
                 folderPriority.setEnabled(false);
                 elementEditName.setEnabled(false);
+                editPriority.setEnabled(false);
+                deletePriority.setEnabled(false);
                 
                 fileButton.setEnabled(false);
                 folderButton.setEnabled(false);
@@ -1261,6 +1360,8 @@ public final class UIMain extends javax.swing.JFrame {
                 folderName.setEnabled(false);
                 folderPriority.setEnabled(false);
                 elementEditName.setEnabled(false);
+                editPriority.setEnabled(false);
+                deletePriority.setEnabled(false);
                 
                 fileButton.setEnabled(false);
                 folderButton.setEnabled(false);
@@ -1374,10 +1475,24 @@ public final class UIMain extends javax.swing.JFrame {
             }
         });
     }
+    
+    /*
+     *   Function Class
+     */
+    
+    public void passJTreeToSimulator() {
+        this.sim.setUpdateJTreeFunction((v) -> updateJTree());
+    }
+    
+    public void passJTableToSimulator() {
+        this.sim.setUpdateJTableFunction((v) -> updateJTable());
+    }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JRadioButton adminButton;
     private javax.swing.JToggleButton deleteButton;
+    private javax.swing.JTextField deletePriority;
+    private javax.swing.JTextField editPriority;
     private javax.swing.JTextField elementCreatedInput;
     private javax.swing.JTextField elementEditName;
     private javax.swing.JTextField elementIndicesInput;
@@ -1408,6 +1523,8 @@ public final class UIMain extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel14;
     private javax.swing.JLabel jLabel15;
     private javax.swing.JLabel jLabel16;
+    private javax.swing.JLabel jLabel17;
+    private javax.swing.JLabel jLabel18;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
