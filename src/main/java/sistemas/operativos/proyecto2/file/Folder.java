@@ -30,8 +30,8 @@ public class Folder {
     }
     
     public Folder getFolder(String name) {
-        LinkedList<Folder> resList = this.subfolders.getKeyList(name);
-        Folder selected = null;
+        LinkedList<Folder> resList = this.subfolders.getAllValues();
+        Folder selected = this;
         
         for (int i = 0; i < resList.size(); i++) {
             Folder res = resList.get(i);
@@ -46,7 +46,7 @@ public class Folder {
     }
     
     public void deleteFolder(String name, int NUM_BLOCKS, boolean[] blockFree) {
-        LinkedList<Folder> resList = this.subfolders.getKeyList(name);
+        LinkedList<Folder> resList = this.subfolders.getAllValues();
         
         for (int i = 0; i < resList.size(); i++) {
             Folder res = resList.get(i);

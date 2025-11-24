@@ -1,8 +1,8 @@
 package sistemas.operativos.proyecto2;
 
-import java.util.Arrays;
 import java.util.Date;
 import javax.swing.event.TreeSelectionEvent;
+import javax.swing.table.DefaultTableModel;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import sistemas.operativos.proyecto2.file.FileMetadata;
@@ -10,6 +10,9 @@ import sistemas.operativos.proyecto2.file.Folder;
 import sistemas.operativos.proyecto2.lib.LinkedList;
 import sistemas.operativos.proyecto2.simulator.Simulator;
 import sistemas.operativos.proyecto2.simulator.Simulator.UserMode;
+import sistemas.operativos.proyecto2.simulator.config.Config;
+import sistemas.operativos.proyecto2.simulator.process.CRUD;
+import sistemas.operativos.proyecto2.simulator.process.Element;
 import sistemas.operativos.proyecto2.utils.Printer;
 
 /**
@@ -29,22 +32,26 @@ public final class UIMain extends javax.swing.JFrame {
         public ElementType type;
         public long creation;
         public long lastModified;
+        public String[] path;
         
-        public TreeNodeSelection(String name, int size, LinkedList<Integer> indices, ElementType type, long creation, long lastModified) {
+        public TreeNodeSelection(String name, int size, LinkedList<Integer> indices, ElementType type, long creation, long lastModified, String[] path) {
             this.name = name;
             this.size = size;
             this.indices = indices;
             this.type = type;
             this.creation = creation;
             this.lastModified = lastModified;
+            this.path = path;
         }
     }
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(UIMain.class.getName());
     
+    private final Config config;
     private final Simulator sim;
     
     private TreeNodeSelection selected;
+    private LinkedList<FileMetadata> fileTableList;
 
     /**
      * Creates new form UIMain
@@ -53,14 +60,25 @@ public final class UIMain extends javax.swing.JFrame {
         initComponents();
         initEvents();
         
-        this.sim = new Simulator();
+        this.config = new Config();
+        this.sim = new Simulator(config);
+        
+        String[] rootPath = {"root"};
         
         Folder rootStart = this.sim.getCurrentFolder();
-        this.selected = new TreeNodeSelection(rootStart.getName(), 0, null, ElementType.FOLDER, rootStart.getCreationTime(), rootStart.getLastModifiedTime());
-        updateSelectedElement();
+        this.selected = new TreeNodeSelection(rootStart.getName(), 0, null, ElementType.FOLDER, rootStart.getCreationTime(), rootStart.getLastModifiedTime(), rootPath);
+        this.fileTableList = new LinkedList();
+        
+        passJTreeToSimulator();
+        passJTableToSimulator();
         
         this.sim.setMode(UserMode.USER);
         updateMode();
+        
+        updateJTable();
+        updateJTree();
+        updateSelectedElement();
+        updateSchedData();
     }
 
     /**
@@ -86,11 +104,22 @@ public final class UIMain extends javax.swing.JFrame {
         fileSize = new javax.swing.JTextField();
         jLabel4 = new javax.swing.JLabel();
         fileButton = new javax.swing.JToggleButton();
+        filePriority = new javax.swing.JTextField();
+        jLabel16 = new javax.swing.JLabel();
         jPanel5 = new javax.swing.JPanel();
         jLabel5 = new javax.swing.JLabel();
         jLabel6 = new javax.swing.JLabel();
         folderName = new javax.swing.JTextField();
         folderButton = new javax.swing.JToggleButton();
+        folderPriority = new javax.swing.JTextField();
+        jLabel15 = new javax.swing.JLabel();
+        jPanel7 = new javax.swing.JPanel();
+        jLabel8 = new javax.swing.JLabel();
+        jLabel9 = new javax.swing.JLabel();
+        elementEditName = new javax.swing.JTextField();
+        modifyButton = new javax.swing.JToggleButton();
+        editPriority = new javax.swing.JTextField();
+        jLabel17 = new javax.swing.JLabel();
         jPanel6 = new javax.swing.JPanel();
         jLabel7 = new javax.swing.JLabel();
         elementSize = new javax.swing.JLabel();
@@ -105,8 +134,25 @@ public final class UIMain extends javax.swing.JFrame {
         elementModifiedInput = new javax.swing.JTextField();
         elementName4 = new javax.swing.JLabel();
         elementIndicesInput = new javax.swing.JTextField();
+        deleteButton = new javax.swing.JToggleButton();
+        deletePriority = new javax.swing.JTextField();
+        jLabel18 = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
         explorerJTree = new javax.swing.JTree();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        fileJTable = new javax.swing.JTable();
+        jPanel8 = new javax.swing.JPanel();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        readyQueue = new javax.swing.JList<>();
+        jScrollPane4 = new javax.swing.JScrollPane();
+        finishedQueue = new javax.swing.JList<>();
+        startSchedButton = new javax.swing.JButton();
+        stopSchedButton = new javax.swing.JButton();
+        jLabel13 = new javax.swing.JLabel();
+        jLabel14 = new javax.swing.JLabel();
+        jPanel11 = new javax.swing.JPanel();
+        jLabel12 = new javax.swing.JLabel();
+        executingField = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -213,6 +259,18 @@ public final class UIMain extends javax.swing.JFrame {
             }
         });
 
+        filePriority.setBackground(new java.awt.Color(51, 51, 51));
+        filePriority.setForeground(new java.awt.Color(255, 255, 255));
+        filePriority.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                filePriorityActionPerformed(evt);
+            }
+        });
+
+        jLabel16.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel16.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel16.setText("Prioridad");
+
         javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
         jPanel4.setLayout(jPanel4Layout);
         jPanel4Layout.setHorizontalGroup(
@@ -224,14 +282,18 @@ public final class UIMain extends javax.swing.JFrame {
                         .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 56, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addComponent(fileName))
-                    .addGroup(jPanel4Layout.createSequentialGroup()
-                        .addComponent(jLabel4)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(fileSize, javax.swing.GroupLayout.DEFAULT_SIZE, 120, Short.MAX_VALUE))
+                    .addComponent(fileButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(jPanel4Layout.createSequentialGroup()
                         .addComponent(jLabel2)
                         .addGap(0, 0, Short.MAX_VALUE))
-                    .addComponent(fileButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addGroup(jPanel4Layout.createSequentialGroup()
+                        .addComponent(jLabel4)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(fileSize, javax.swing.GroupLayout.DEFAULT_SIZE, 80, Short.MAX_VALUE))
+                    .addGroup(jPanel4Layout.createSequentialGroup()
+                        .addComponent(jLabel16)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(filePriority)))
                 .addContainerGap())
         );
         jPanel4Layout.setVerticalGroup(
@@ -248,8 +310,12 @@ public final class UIMain extends javax.swing.JFrame {
                     .addComponent(jLabel4)
                     .addComponent(fileSize, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel16)
+                    .addComponent(filePriority, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(fileButton)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap())
         );
 
         jPanel5.setBackground(new java.awt.Color(102, 102, 102));
@@ -281,6 +347,18 @@ public final class UIMain extends javax.swing.JFrame {
             }
         });
 
+        folderPriority.setBackground(new java.awt.Color(51, 51, 51));
+        folderPriority.setForeground(new java.awt.Color(255, 255, 255));
+        folderPriority.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                folderPriorityActionPerformed(evt);
+            }
+        });
+
+        jLabel15.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel15.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel15.setText("Prioridad");
+
         javax.swing.GroupLayout jPanel5Layout = new javax.swing.GroupLayout(jPanel5);
         jPanel5.setLayout(jPanel5Layout);
         jPanel5Layout.setHorizontalGroup(
@@ -290,12 +368,16 @@ public final class UIMain extends javax.swing.JFrame {
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel5Layout.createSequentialGroup()
                         .addComponent(jLabel5)
-                        .addGap(0, 69, Short.MAX_VALUE))
+                        .addGap(0, 19, Short.MAX_VALUE))
                     .addGroup(jPanel5Layout.createSequentialGroup()
                         .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 56, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addComponent(folderName))
-                    .addComponent(folderButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(folderButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(jPanel5Layout.createSequentialGroup()
+                        .addComponent(jLabel15, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(folderPriority)))
                 .addContainerGap())
         );
         jPanel5Layout.setVerticalGroup(
@@ -307,8 +389,92 @@ public final class UIMain extends javax.swing.JFrame {
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel6)
                     .addComponent(folderName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel15)
+                    .addComponent(folderPriority, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(folderButton)
+                .addContainerGap())
+        );
+
+        jPanel7.setBackground(new java.awt.Color(102, 102, 102));
+
+        jLabel8.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel8.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel8.setText("Elemento Actual");
+
+        jLabel9.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel9.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel9.setText("Nombre");
+
+        elementEditName.setBackground(new java.awt.Color(51, 51, 51));
+        elementEditName.setForeground(new java.awt.Color(255, 255, 255));
+        elementEditName.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                elementEditNameActionPerformed(evt);
+            }
+        });
+
+        modifyButton.setBackground(new java.awt.Color(51, 51, 51));
+        modifyButton.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        modifyButton.setForeground(new java.awt.Color(255, 255, 255));
+        modifyButton.setText("Modificar Elemento");
+        modifyButton.setFocusPainted(false);
+        modifyButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                modifyButtonActionPerformed(evt);
+            }
+        });
+
+        editPriority.setBackground(new java.awt.Color(51, 51, 51));
+        editPriority.setForeground(new java.awt.Color(255, 255, 255));
+        editPriority.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                editPriorityActionPerformed(evt);
+            }
+        });
+
+        jLabel17.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel17.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel17.setText("Prioridad");
+
+        javax.swing.GroupLayout jPanel7Layout = new javax.swing.GroupLayout(jPanel7);
+        jPanel7.setLayout(jPanel7Layout);
+        jPanel7Layout.setHorizontalGroup(
+            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel7Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel7Layout.createSequentialGroup()
+                        .addComponent(jLabel8)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addGroup(jPanel7Layout.createSequentialGroup()
+                        .addComponent(jLabel9, javax.swing.GroupLayout.PREFERRED_SIZE, 56, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(elementEditName))
+                    .addComponent(modifyButton, javax.swing.GroupLayout.DEFAULT_SIZE, 217, Short.MAX_VALUE)
+                    .addGroup(jPanel7Layout.createSequentialGroup()
+                        .addComponent(jLabel17)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(editPriority)))
+                .addContainerGap())
+        );
+        jPanel7Layout.setVerticalGroup(
+            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel7Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel8)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel9)
+                    .addComponent(elementEditName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel17)
+                    .addComponent(editPriority, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(modifyButton)
                 .addContainerGap())
         );
 
@@ -321,15 +487,19 @@ public final class UIMain extends javax.swing.JFrame {
                 .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(168, Short.MAX_VALUE))
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel3Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(jPanel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                        .addComponent(jPanel5, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(jPanel4, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
@@ -345,6 +515,7 @@ public final class UIMain extends javax.swing.JFrame {
 
         elementNameInput.setBackground(new java.awt.Color(51, 51, 51));
         elementNameInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementNameInput.setEnabled(false);
         elementNameInput.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 elementNameInputActionPerformed(evt);
@@ -357,6 +528,7 @@ public final class UIMain extends javax.swing.JFrame {
 
         elementSizeInput.setBackground(new java.awt.Color(51, 51, 51));
         elementSizeInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementSizeInput.setEnabled(false);
         elementSizeInput.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 elementSizeInputActionPerformed(evt);
@@ -369,6 +541,7 @@ public final class UIMain extends javax.swing.JFrame {
 
         elementTypeInput.setBackground(new java.awt.Color(51, 51, 51));
         elementTypeInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementTypeInput.setEnabled(false);
         elementTypeInput.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 elementTypeInputActionPerformed(evt);
@@ -381,6 +554,7 @@ public final class UIMain extends javax.swing.JFrame {
 
         elementCreatedInput.setBackground(new java.awt.Color(51, 51, 51));
         elementCreatedInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementCreatedInput.setEnabled(false);
         elementCreatedInput.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 elementCreatedInputActionPerformed(evt);
@@ -393,6 +567,7 @@ public final class UIMain extends javax.swing.JFrame {
 
         elementModifiedInput.setBackground(new java.awt.Color(51, 51, 51));
         elementModifiedInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementModifiedInput.setEnabled(false);
         elementModifiedInput.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 elementModifiedInputActionPerformed(evt);
@@ -405,11 +580,35 @@ public final class UIMain extends javax.swing.JFrame {
 
         elementIndicesInput.setBackground(new java.awt.Color(51, 51, 51));
         elementIndicesInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementIndicesInput.setEnabled(false);
         elementIndicesInput.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 elementIndicesInputActionPerformed(evt);
             }
         });
+
+        deleteButton.setBackground(new java.awt.Color(51, 51, 51));
+        deleteButton.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        deleteButton.setForeground(new java.awt.Color(255, 255, 255));
+        deleteButton.setText("Borrar Elemento");
+        deleteButton.setFocusPainted(false);
+        deleteButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                deleteButtonActionPerformed(evt);
+            }
+        });
+
+        deletePriority.setBackground(new java.awt.Color(51, 51, 51));
+        deletePriority.setForeground(new java.awt.Color(255, 255, 255));
+        deletePriority.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                deletePriorityActionPerformed(evt);
+            }
+        });
+
+        jLabel18.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel18.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel18.setText("Prioridad");
 
         javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
         jPanel6.setLayout(jPanel6Layout);
@@ -426,11 +625,6 @@ public final class UIMain extends javax.swing.JFrame {
                         .addComponent(elementName1)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(elementTypeInput))
-                    .addComponent(jLabel7)
-                    .addGroup(jPanel6Layout.createSequentialGroup()
-                        .addComponent(elementSize)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(elementSizeInput, javax.swing.GroupLayout.PREFERRED_SIZE, 179, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel6Layout.createSequentialGroup()
                         .addComponent(elementName2)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -442,7 +636,19 @@ public final class UIMain extends javax.swing.JFrame {
                     .addGroup(jPanel6Layout.createSequentialGroup()
                         .addComponent(elementName4)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(elementIndicesInput)))
+                        .addComponent(elementIndicesInput))
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addComponent(elementSize)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(elementSizeInput, javax.swing.GroupLayout.DEFAULT_SIZE, 111, Short.MAX_VALUE))
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addComponent(jLabel7)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addComponent(deleteButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addComponent(jLabel18)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(deletePriority)))
                 .addContainerGap())
         );
         jPanel6Layout.setVerticalGroup(
@@ -474,43 +680,231 @@ public final class UIMain extends javax.swing.JFrame {
                 .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(elementName3)
                     .addComponent(elementModifiedInput, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 45, Short.MAX_VALUE)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel18)
+                    .addComponent(deletePriority, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(deleteButton)
+                .addContainerGap())
         );
 
         explorerJTree.setBackground(new java.awt.Color(255, 255, 255));
         explorerJTree.setForeground(new java.awt.Color(51, 51, 51));
         javax.swing.tree.DefaultMutableTreeNode treeNode1 = new javax.swing.tree.DefaultMutableTreeNode("root");
         explorerJTree.setModel(new javax.swing.tree.DefaultTreeModel(treeNode1));
+        explorerJTree.setDropMode(javax.swing.DropMode.ON);
         jScrollPane1.setViewportView(explorerJTree);
+
+        fileJTable.setBackground(new java.awt.Color(255, 255, 255));
+        fileJTable.setForeground(new java.awt.Color(51, 51, 51));
+        fileJTable.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null},
+                {null, null, null},
+                {null, null, null},
+                {null, null, null},
+                {null, null, null}
+            },
+            new String [] {
+                "Nombre", "Tamaño", "Índices"
+            }
+        ) {
+            Class[] types = new Class [] {
+                java.lang.String.class, java.lang.String.class, java.lang.String.class
+            };
+            boolean[] canEdit = new boolean [] {
+                false, false, false
+            };
+
+            public Class getColumnClass(int columnIndex) {
+                return types [columnIndex];
+            }
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        fileJTable.setSelectionBackground(new java.awt.Color(102, 102, 102));
+        fileJTable.setSelectionForeground(new java.awt.Color(255, 255, 255));
+        jScrollPane2.setViewportView(fileJTable);
+
+        jPanel8.setBackground(new java.awt.Color(51, 51, 51));
+        jPanel8.setForeground(new java.awt.Color(255, 255, 255));
+
+        readyQueue.setBackground(new java.awt.Color(51, 51, 51));
+        readyQueue.setForeground(new java.awt.Color(255, 255, 255));
+        readyQueue.setModel(new javax.swing.AbstractListModel<String>() {
+            String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
+            public int getSize() { return strings.length; }
+            public String getElementAt(int i) { return strings[i]; }
+        });
+        readyQueue.setToolTipText("");
+        jScrollPane3.setViewportView(readyQueue);
+
+        finishedQueue.setBackground(new java.awt.Color(51, 51, 51));
+        finishedQueue.setForeground(new java.awt.Color(255, 255, 255));
+        finishedQueue.setModel(new javax.swing.AbstractListModel<String>() {
+            String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
+            public int getSize() { return strings.length; }
+            public String getElementAt(int i) { return strings[i]; }
+        });
+        jScrollPane4.setViewportView(finishedQueue);
+
+        startSchedButton.setBackground(new java.awt.Color(102, 102, 102));
+        startSchedButton.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        startSchedButton.setForeground(new java.awt.Color(255, 255, 255));
+        startSchedButton.setText("Iniciar");
+        startSchedButton.setFocusPainted(false);
+        startSchedButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                startSchedButtonActionPerformed(evt);
+            }
+        });
+
+        stopSchedButton.setBackground(new java.awt.Color(102, 102, 102));
+        stopSchedButton.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        stopSchedButton.setForeground(new java.awt.Color(255, 255, 255));
+        stopSchedButton.setText("Pausar");
+        stopSchedButton.setEnabled(false);
+        stopSchedButton.setFocusPainted(false);
+        stopSchedButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                stopSchedButtonActionPerformed(evt);
+            }
+        });
+
+        jLabel13.setBackground(new java.awt.Color(51, 51, 51));
+        jLabel13.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel13.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel13.setText("Listos");
+
+        jLabel14.setBackground(new java.awt.Color(51, 51, 51));
+        jLabel14.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel14.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel14.setText("Terminados");
+
+        javax.swing.GroupLayout jPanel8Layout = new javax.swing.GroupLayout(jPanel8);
+        jPanel8.setLayout(jPanel8Layout);
+        jPanel8Layout.setHorizontalGroup(
+            jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel8Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                    .addComponent(jLabel13, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jScrollPane3, javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(startSchedButton, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 114, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(jScrollPane4)
+                    .addComponent(stopSchedButton, javax.swing.GroupLayout.DEFAULT_SIZE, 121, Short.MAX_VALUE)
+                    .addComponent(jLabel14, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+        jPanel8Layout.setVerticalGroup(
+            jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel8Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel13, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel14, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane4)
+                    .addComponent(jScrollPane3))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(startSchedButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(stopSchedButton, javax.swing.GroupLayout.DEFAULT_SIZE, 39, Short.MAX_VALUE))
+                .addContainerGap())
+        );
+
+        jPanel11.setBackground(new java.awt.Color(102, 102, 102));
+
+        jLabel12.setBackground(new java.awt.Color(51, 51, 51));
+        jLabel12.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        jLabel12.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel12.setText("Ejecutando");
+
+        executingField.setBackground(new java.awt.Color(51, 51, 51));
+        executingField.setForeground(new java.awt.Color(255, 255, 255));
+        executingField.setEnabled(false);
+        executingField.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                executingFieldActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel11Layout = new javax.swing.GroupLayout(jPanel11);
+        jPanel11.setLayout(jPanel11Layout);
+        jPanel11Layout.setHorizontalGroup(
+            jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel11Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(executingField, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addGroup(jPanel11Layout.createSequentialGroup()
+                        .addComponent(jLabel12, javax.swing.GroupLayout.PREFERRED_SIZE, 104, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(0, 118, Short.MAX_VALUE)))
+                .addContainerGap())
+        );
+        jPanel11Layout.setVerticalGroup(
+            jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel11Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel12, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(executingField, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 522, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap()
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jPanel11, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addComponent(jScrollPane1)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 482, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jPanel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(jPanel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jPanel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap())
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jPanel11, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jPanel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jPanel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jScrollPane1)))
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
+                    .addComponent(jPanel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap())
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -550,12 +944,31 @@ public final class UIMain extends javax.swing.JFrame {
 
     private void fileButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_fileButtonActionPerformed
         // TODO add your handling code here:
-        createFile();
+        //createFile();
+        if (fileSize.getText().trim().isEmpty()) return;
+        if (filePriority.getText().trim().isEmpty()) return;
+        
+        String name = fileName.getText().trim();
+        int size = Integer.parseInt(fileSize.getText().trim());
+        int priority = Integer.parseInt(filePriority.getText().trim());
+        
+        if (name.isEmpty() || size < 1 || priority < 0) return;
+        
+        createCRUDProcess(name, size, priority, Element.Type.FILE, selected.path, CRUD.CREATE);
     }//GEN-LAST:event_fileButtonActionPerformed
 
     private void folderButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_folderButtonActionPerformed
         // TODO add your handling code here:
-        createFolder();
+        //createFolder();
+        if (folderPriority.getText().trim().isEmpty()) return;
+        
+        String name = folderName.getText().trim();
+        int size = 1;
+        int priority = Integer.parseInt(folderPriority.getText().trim());
+        
+        if (name.isEmpty() || size < 1 || priority < 0) return;
+        
+        createCRUDProcess(name, size, priority, Element.Type.FOLDER, selected.path, CRUD.CREATE);
     }//GEN-LAST:event_folderButtonActionPerformed
 
     private void elementNameInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_elementNameInputActionPerformed
@@ -581,6 +994,90 @@ public final class UIMain extends javax.swing.JFrame {
     private void elementIndicesInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_elementIndicesInputActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_elementIndicesInputActionPerformed
+
+    private void modifyButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_modifyButtonActionPerformed
+        // TODO add your handling code here:
+        //modifyElement();
+        if (editPriority.getText().trim().isEmpty()) return;
+        
+        String name = elementEditName.getText().trim();
+        Element.Type type;
+        int size = selected.size;
+        int priority = Integer.parseInt(editPriority.getText().trim());
+        
+        if (selected.type == ElementType.FILE) {
+            type = Element.Type.FILE;
+        } else {
+            type = Element.Type.FOLDER;
+        }
+        
+        if (name.isEmpty() || priority < 0) return;
+        if ((type == Element.Type.FILE && priority < 1) || (type == Element.Type.FOLDER && priority < 0)) return;
+        
+        createCRUDProcess(name, size, priority, type, selected.path, CRUD.UPDATE);
+    }//GEN-LAST:event_modifyButtonActionPerformed
+
+    private void elementEditNameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_elementEditNameActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_elementEditNameActionPerformed
+
+    private void deleteButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteButtonActionPerformed
+        // TODO add your handling code here:
+        //deleteElement();
+        if (deletePriority.getText().trim().isEmpty()) return;
+        
+        String name = selected.name;
+        Element.Type type;
+        int size = selected.size;
+        int priority = Integer.parseInt(deletePriority.getText().trim());
+        
+        if (selected.type == ElementType.FILE) {
+            type = Element.Type.FILE;
+        } else {
+            type = Element.Type.FOLDER;
+        }
+        
+        if (name.isEmpty() || priority < 0) return;
+        if ((type == Element.Type.FILE && priority < 1) || (type == Element.Type.FOLDER && priority < 0)) return;
+        
+        createCRUDProcess(name, size, priority, type, selected.path, CRUD.DELETE);
+    }//GEN-LAST:event_deleteButtonActionPerformed
+
+    private void executingFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_executingFieldActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_executingFieldActionPerformed
+
+    private void startSchedButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startSchedButtonActionPerformed
+        // TODO add your handling code here:
+        this.stopSchedButton.setEnabled(true);
+        this.startSchedButton.setEnabled(false);
+        
+        this.sim.startSchedulerExecution();
+    }//GEN-LAST:event_startSchedButtonActionPerformed
+
+    private void stopSchedButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_stopSchedButtonActionPerformed
+        // TODO add your handling code here:
+        this.stopSchedButton.setEnabled(false);
+        this.startSchedButton.setEnabled(true);
+        
+        this.sim.stopSchedulerExecution();
+    }//GEN-LAST:event_stopSchedButtonActionPerformed
+
+    private void folderPriorityActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_folderPriorityActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_folderPriorityActionPerformed
+
+    private void filePriorityActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_filePriorityActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_filePriorityActionPerformed
+
+    private void editPriorityActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_editPriorityActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_editPriorityActionPerformed
+
+    private void deletePriorityActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deletePriorityActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_deletePriorityActionPerformed
 
     /**
      * @param args the command line arguments
@@ -608,6 +1105,18 @@ public final class UIMain extends javax.swing.JFrame {
     }
     
     /*
+     *   Crear procesos de CRUD
+     */
+    
+    public void createCRUDProcess(String fileName, int blocks, int priority, Element.Type type, String[] path, CRUD crud) {
+        String name = "Proceso" + crud.toString() + "-" + String.valueOf(System.currentTimeMillis());
+        
+        Element element = new Element(fileName, blocks, type, path);
+        
+        this.sim.sched.createProcess(name, priority, element, crud);
+    }
+    
+    /*
      *   Crear archivos y carpetas
      */
     
@@ -621,6 +1130,7 @@ public final class UIMain extends javax.swing.JFrame {
             int size = Integer.parseInt(sizeStr);
             sim.writeFile(name, size);
             updateJTree();
+            updateJTable();
         } catch (NumberFormatException ex) {
             System.out.println(ex);
         }
@@ -631,6 +1141,85 @@ public final class UIMain extends javax.swing.JFrame {
         if (name.isEmpty()) { return; }
         sim.createFolder(name);
         updateJTree();
+        updateJTable();
+    }
+    
+    /*
+     *   Modificar archivos y carpetas
+     */
+    
+    public void modifyElement() {
+        String newName = elementEditName.getText().trim();
+        if (newName.isEmpty() || "root".equals(newName) || "root".equals(selected.name)) { return; }
+        
+        this.sim.currentToRoot();
+        
+        switch(selected.type) {
+            case ElementType.FILE -> {
+                for (int i = 0; i < selected.path.length; i++) {
+                    if (i == selected.path.length - 1) {
+                        this.sim.getFolder(selected.path[i]).modifyFile(selected.path[i], newName);
+                    } else {
+                        this.sim.getFolder(selected.path[i]);
+                    }
+                }
+                
+                break;
+            }
+            case ElementType.FOLDER -> {
+                for (int i = 0; i < selected.path.length; i++) {
+                    if (i == selected.path.length - 1) {
+                        this.sim.getFolder(selected.path[i]).modifyFolder(newName);
+                    } else {
+                        this.sim.getFolder(selected.path[i]);
+                    }
+                }
+                
+                break;
+            }
+        }
+        
+        updateJTree();
+        updateJTable();
+    }
+    
+    /*
+     *   Borrar archivos y carpetas
+     */
+    
+    public void deleteElement() {
+        String newName = selected.name;
+        if (newName.isEmpty() || "root".equals(newName)) { return; }
+        
+        this.sim.currentToRoot();
+        
+        switch(selected.type) {
+            case ElementType.FILE -> {
+                for (int i = 0; i < selected.path.length; i++) {
+                    if (i == selected.path.length - 1) {
+                        this.sim.getFolder(selected.path[i]).deleteFile(newName);
+                    } else {
+                        this.sim.getFolder(selected.path[i]);
+                    }
+                }
+                
+                break;
+            }
+            case ElementType.FOLDER -> {
+                for (int i = 0; i < selected.path.length; i++) {
+                    if (i == selected.path.length - 1) {
+                        this.sim.deleteFolder(newName);
+                    } else {
+                        this.sim.getFolder(selected.path[i]);
+                    }
+                }
+                
+                break;
+            }
+        }
+        
+        updateJTree();
+        updateJTable();
     }
     
     /*
@@ -668,25 +1257,65 @@ public final class UIMain extends javax.swing.JFrame {
      *   Updates
      */
     
-    private void updateJTree() {
-        DefaultTreeModel model = (DefaultTreeModel) explorerJTree.getModel();
-        DefaultMutableTreeNode rootFolder = (DefaultMutableTreeNode)model.getRoot();
-        
-        rootFolder.removeAllChildren();
-        
-        LinkedList<Folder> folders = this.sim.rootFolder.getSubfolders();
-        LinkedList<FileMetadata> files = this.sim.rootFolder.getFiles();
+    private void updateJTableHelper(Folder reg) {
+        LinkedList<Folder> folders = reg.getSubfolders();
+        LinkedList<FileMetadata> files = reg.getFiles();
         
         for (int i = 0; i < folders.size(); i++) {
-            addFolder(rootFolder, folders.get(i));
+            updateJTableHelper(folders.get(i));
         }
         
         for (int i = 0; i < files.size(); i++) {
+            fileTableList.add(files.get(i));
+        }
+    }
+    
+    public void updateJTable() {
+        DefaultTableModel model = (DefaultTableModel) fileJTable.getModel();
+
+        for (int i = fileTableList.size() - 1; i >= 0; i--) {
+            model.removeRow(i);
+        }
+
+        this.fileTableList = new LinkedList();
+
+        LinkedList<Folder> folders = this.sim.rootFolder.getSubfolders();
+        LinkedList<FileMetadata> files = this.sim.rootFolder.getFiles();
+
+        for (int i = 0; i < folders.size(); i++) {
+            updateJTableHelper(folders.get(i));
+        }
+
+        for (int i = 0; i < files.size(); i++) {
+            fileTableList.add(files.get(i));
+        }
+
+        for (int i = 0; i < fileTableList.size(); i++) {
+            FileMetadata item = fileTableList.get(i);
+
+            model.insertRow(0, new Object[]{ item.getFileName(), String.valueOf(item.getFileSize()), item.getBlockIndices().toString() });
+        }
+    }
+    
+    public void updateJTree() {
+        DefaultTreeModel model = (DefaultTreeModel) explorerJTree.getModel();
+        DefaultMutableTreeNode rootFolder = (DefaultMutableTreeNode)model.getRoot();
+
+        rootFolder.removeAllChildren();
+
+        LinkedList<Folder> folders = this.sim.rootFolder.getSubfolders();
+        LinkedList<FileMetadata> files = this.sim.rootFolder.getFiles();
+
+        for (int i = 0; i < folders.size(); i++) {
+            addFolder(rootFolder, folders.get(i));
+        }
+
+        for (int i = 0; i < files.size(); i++) {
             addFile(rootFolder, files.get(i));
         }
-        
+
         model.reload(rootFolder);
-        
+
         this.sim.currentToRoot();
     }
     
@@ -697,26 +1326,47 @@ public final class UIMain extends javax.swing.JFrame {
             case ADMIN -> {
                 fileName.setEnabled(true);
                 fileSize.setEnabled(true);
+                filePriority.setEnabled(true);
                 folderName.setEnabled(true);
+                folderPriority.setEnabled(true);
+                elementEditName.setEnabled(true);
+                editPriority.setEnabled(true);
+                deletePriority.setEnabled(true);
                 
                 fileButton.setEnabled(true);
                 folderButton.setEnabled(true);
+                modifyButton.setEnabled(true);
+                deleteButton.setEnabled(true);
             }
             case USER -> {
                 fileName.setEnabled(false);
                 fileSize.setEnabled(false);
+                filePriority.setEnabled(false);
                 folderName.setEnabled(false);
+                folderPriority.setEnabled(false);
+                elementEditName.setEnabled(false);
+                editPriority.setEnabled(false);
+                deletePriority.setEnabled(false);
                 
                 fileButton.setEnabled(false);
                 folderButton.setEnabled(false);
+                modifyButton.setEnabled(false);
+                deleteButton.setEnabled(false);
             }
             default -> {
                 fileName.setEnabled(false);
                 fileSize.setEnabled(false);
+                filePriority.setEnabled(false);
                 folderName.setEnabled(false);
+                folderPriority.setEnabled(false);
+                elementEditName.setEnabled(false);
+                editPriority.setEnabled(false);
+                deletePriority.setEnabled(false);
                 
                 fileButton.setEnabled(false);
                 folderButton.setEnabled(false);
+                modifyButton.setEnabled(false);
+                deleteButton.setEnabled(false);
             }
         }
     }
@@ -724,13 +1374,13 @@ public final class UIMain extends javax.swing.JFrame {
     public void updateSelectedElement() {
         this.elementNameInput.setText(this.selected.name);
         this.elementSizeInput.setText(String.valueOf(this.selected.size));
-        
+
         if (this.selected.indices != null) {
             this.elementIndicesInput.setText(this.selected.indices.toString());
         } else {
             this.elementIndicesInput.setText("No hay indices");
         }
-        
+
         switch(this.selected.type) {
             case ElementType.FILE -> {
                 this.elementTypeInput.setText("Archivo");
@@ -742,9 +1392,39 @@ public final class UIMain extends javax.swing.JFrame {
                 this.elementTypeInput.setText("Desconocido");
             }
         }
-                
+
         this.elementCreatedInput.setText(new Date(this.selected.creation).toString());
         this.elementModifiedInput.setText(new Date(this.selected.lastModified).toString());
+    }
+    
+    private void updateSchedData() {
+        Thread updater = new Thread(() -> {
+            while(true) {
+                try {
+                    Thread.sleep(500);
+                    
+                    String currentRun;
+                    
+                    if (this.sim.sched.getCurrentProcess() != null) {
+                        currentRun = this.sim.sched.getCurrentProcess().name();
+                    } else {
+                        currentRun = "Ninguno";
+                    }
+                    
+                    String[] newReadyList = this.sim.sched.getReadyList();
+                    String[] newFinishedList = this.sim.sched.getFinishedList();
+                    
+                    
+                    this.executingField.setText(currentRun);
+                    this.readyQueue.setListData(newReadyList);
+                    this.finishedQueue.setListData(newFinishedList);
+                } catch (InterruptedException e) {
+                     Thread.currentThread().interrupt();
+                }
+            }
+        }, "External-Updater");
+        
+        updater.start();
     }
     
     /*
@@ -760,37 +1440,61 @@ public final class UIMain extends javax.swing.JFrame {
             if (selectedNode != null) {
                 int maxPathLength = selectedNode.getUserObjectPath().length;
                 Folder selectionFolder = this.sim.rootFolder;
-                FileMetadata selectionFile = null;
+                FileMetadata selectionFile;
                 this.sim.currentToRoot();
                 
                 if (selectedNode.getAllowsChildren()) {                    
-                    for (int i = 1; i < maxPathLength; i++) {
+                    for (int i = 0; i < maxPathLength; i++) {
                         selectionFolder = this.sim.getFolder(selectedNode.getUserObjectPath()[i].toString()).getCurrentFolder();
                     }
                     
-                    this.selected = new TreeNodeSelection(selectionFolder.getName(), 0, null, ElementType.FOLDER, selectionFolder.getCreationTime(), selectionFolder.getLastModifiedTime());
+                    String[] path = new String[maxPathLength];
+                    
+                    for (int i = 0; i < maxPathLength; i++) {
+                        path[i] = String.valueOf(selectedNode.getUserObjectPath()[i]);
+                    }
+                    
+                    this.selected = new TreeNodeSelection(selectionFolder.getName(), 0, null, ElementType.FOLDER, selectionFolder.getCreationTime(), selectionFolder.getLastModifiedTime(), path);
                 } else {
-                    for (int i = 1; i < maxPathLength - 1; i++) {
+                    for (int i = 0; i < maxPathLength - 1; i++) {
                         selectionFolder = this.sim.getFolder(selectedNode.getUserObjectPath()[i].toString()).getCurrentFolder();
+                    }
+                    
+                    String[] path = new String[maxPathLength];
+                    
+                    for (int i = 0; i < maxPathLength; i++) {
+                        path[i] = String.valueOf(selectedNode.getUserObjectPath()[i]);
                     }
                     
                     selectionFile = selectionFolder.getFile(selectedNode.getUserObjectPath()[maxPathLength - 1].toString());
                     
-                    this.selected = new TreeNodeSelection(selectionFile.getFileName(), selectionFile.getFileSize(), selectionFile.getBlockIndices(), ElementType.FILE, selectionFile.getCreationTime(), selectionFile.getLastModifiedTime());
+                    this.selected = new TreeNodeSelection(selectionFile.getFileName(), selectionFile.getFileSize(), selectionFile.getBlockIndices(), ElementType.FILE, selectionFile.getCreationTime(), selectionFile.getLastModifiedTime(), path);
                 }
-                
+            
                 updateSelectedElement();
-                
-                Printer.print(selectedNode.getUserObject().toString());
-                Printer.print(Arrays.toString(selectedNode.getUserObjectPath()));
-                Printer.print(selectedNode.getAllowsChildren()); // Chequea si puede tener hijos o no (si es carpeta o archivo)
             }
         });
+    }
+    
+    /*
+     *   Function Class
+     */
+    
+    public void passJTreeToSimulator() {
+        this.sim.setUpdateJTreeFunction((v) -> updateJTree());
+    }
+    
+    public void passJTableToSimulator() {
+        this.sim.setUpdateJTableFunction((v) -> updateJTable());
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JRadioButton adminButton;
+    private javax.swing.JToggleButton deleteButton;
+    private javax.swing.JTextField deletePriority;
+    private javax.swing.JTextField editPriority;
     private javax.swing.JTextField elementCreatedInput;
+    private javax.swing.JTextField elementEditName;
     private javax.swing.JTextField elementIndicesInput;
     private javax.swing.JTextField elementModifiedInput;
     private javax.swing.JLabel elementName;
@@ -802,27 +1506,51 @@ public final class UIMain extends javax.swing.JFrame {
     private javax.swing.JLabel elementSize;
     private javax.swing.JTextField elementSizeInput;
     private javax.swing.JTextField elementTypeInput;
+    private javax.swing.JTextField executingField;
     private javax.swing.JTree explorerJTree;
     private javax.swing.JToggleButton fileButton;
+    private javax.swing.JTable fileJTable;
     private javax.swing.JTextField fileName;
+    private javax.swing.JTextField filePriority;
     private javax.swing.JTextField fileSize;
+    private javax.swing.JList<String> finishedQueue;
     private javax.swing.JToggleButton folderButton;
     private javax.swing.JTextField folderName;
+    private javax.swing.JTextField folderPriority;
     private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel12;
+    private javax.swing.JLabel jLabel13;
+    private javax.swing.JLabel jLabel14;
+    private javax.swing.JLabel jLabel15;
+    private javax.swing.JLabel jLabel16;
+    private javax.swing.JLabel jLabel17;
+    private javax.swing.JLabel jLabel18;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel8;
+    private javax.swing.JLabel jLabel9;
     private javax.swing.JPanel jPanel1;
+    private javax.swing.JPanel jPanel11;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
     private javax.swing.JPanel jPanel5;
     private javax.swing.JPanel jPanel6;
+    private javax.swing.JPanel jPanel7;
+    private javax.swing.JPanel jPanel8;
     private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JScrollPane jScrollPane3;
+    private javax.swing.JScrollPane jScrollPane4;
     private javax.swing.ButtonGroup modeGroup;
+    private javax.swing.JToggleButton modifyButton;
+    private javax.swing.JList<String> readyQueue;
+    private javax.swing.JButton startSchedButton;
+    private javax.swing.JButton stopSchedButton;
     private javax.swing.JRadioButton userButton;
     // End of variables declaration//GEN-END:variables
 }
