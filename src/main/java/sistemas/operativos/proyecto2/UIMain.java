@@ -1,5 +1,6 @@
 package sistemas.operativos.proyecto2;
 
+import java.util.Arrays;
 import java.util.Date;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.table.DefaultTableModel;
@@ -10,6 +11,7 @@ import sistemas.operativos.proyecto2.file.Folder;
 import sistemas.operativos.proyecto2.lib.LinkedList;
 import sistemas.operativos.proyecto2.simulator.Simulator;
 import sistemas.operativos.proyecto2.simulator.Simulator.UserMode;
+import sistemas.operativos.proyecto2.utils.Printer;
 
 /**
  *
@@ -729,6 +731,7 @@ public final class UIMain extends javax.swing.JFrame {
 
     private void deleteButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteButtonActionPerformed
         // TODO add your handling code here:
+        deleteElement();
     }//GEN-LAST:event_deleteButtonActionPerformed
 
     /**
@@ -810,6 +813,45 @@ public final class UIMain extends javax.swing.JFrame {
                 for (int i = 0; i < selected.path.length; i++) {
                     if (i == selected.path.length - 1) {
                         this.sim.getFolder(selected.path[i]).modifyFolder(newName);
+                    } else {
+                        this.sim.getFolder(selected.path[i]);
+                    }
+                }
+                
+                break;
+            }
+        }
+        
+        updateJTree();
+        updateJTable();
+    }
+    
+    /*
+     *   Borrar archivos y carpetas
+     */
+    
+    private void deleteElement() {
+        String newName = selected.name;
+        if (newName.isEmpty() || "root".equals(newName)) { return; }
+        
+        this.sim.currentToRoot();
+        
+        switch(selected.type) {
+            case ElementType.FILE -> {
+                for (int i = 0; i < selected.path.length; i++) {
+                    if (i == selected.path.length - 1) {
+                        this.sim.getFolder(selected.path[i]).deleteFile(newName);
+                    } else {
+                        this.sim.getFolder(selected.path[i]);
+                    }
+                }
+                
+                break;
+            }
+            case ElementType.FOLDER -> {
+                for (int i = 0; i < selected.path.length; i++) {
+                    if (i == selected.path.length - 1) {
+                        this.sim.deleteFolder(newName);
                     } else {
                         this.sim.getFolder(selected.path[i]);
                     }
@@ -933,6 +975,7 @@ public final class UIMain extends javax.swing.JFrame {
                 fileButton.setEnabled(true);
                 folderButton.setEnabled(true);
                 modifyButton.setEnabled(true);
+                deleteButton.setEnabled(true);
             }
             case USER -> {
                 fileName.setEnabled(false);
@@ -943,6 +986,7 @@ public final class UIMain extends javax.swing.JFrame {
                 fileButton.setEnabled(false);
                 folderButton.setEnabled(false);
                 modifyButton.setEnabled(false);
+                deleteButton.setEnabled(false);
             }
             default -> {
                 fileName.setEnabled(false);
@@ -953,6 +997,7 @@ public final class UIMain extends javax.swing.JFrame {
                 fileButton.setEnabled(false);
                 folderButton.setEnabled(false);
                 modifyButton.setEnabled(false);
+                deleteButton.setEnabled(false);
             }
         }
     }
