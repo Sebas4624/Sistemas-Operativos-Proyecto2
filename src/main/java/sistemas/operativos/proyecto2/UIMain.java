@@ -15,6 +15,7 @@ import sistemas.operativos.proyecto2.simulator.process.CRUD;
 import sistemas.operativos.proyecto2.simulator.process.Element;
 import sistemas.operativos.proyecto2.utils.Printer;
 
+
 /**
  *
  * @author sebas
@@ -52,6 +53,8 @@ public final class UIMain extends javax.swing.JFrame {
     
     private TreeNodeSelection selected;
     private LinkedList<FileMetadata> fileTableList;
+    private DiskPanel diskPanel;
+
 
     /**
      * Creates new form UIMain
@@ -62,6 +65,11 @@ public final class UIMain extends javax.swing.JFrame {
         
         this.config = new Config();
         this.sim = new Simulator(config);
+        this.diskPanel = new DiskPanel(this.sim);
+
+        diskPanelHolder.setLayout(new java.awt.BorderLayout());
+        diskPanelHolder.add(diskPanel, java.awt.BorderLayout.CENTER);
+        
         
         String[] rootPath = {"root"};
         
@@ -120,6 +128,7 @@ public final class UIMain extends javax.swing.JFrame {
         modifyButton = new javax.swing.JToggleButton();
         editPriority = new javax.swing.JTextField();
         jLabel17 = new javax.swing.JLabel();
+        diskPanelHolder = new javax.swing.JPanel();
         jPanel6 = new javax.swing.JPanel();
         jLabel7 = new javax.swing.JLabel();
         elementSize = new javax.swing.JLabel();
@@ -478,6 +487,21 @@ public final class UIMain extends javax.swing.JFrame {
                 .addContainerGap())
         );
 
+        diskPanelHolder.setBackground(new java.awt.Color(102, 102, 102));
+        diskPanelHolder.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Mapa de bloques del disco", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Helvetica Neue", 0, 13), new java.awt.Color(255, 255, 255))); // NOI18N
+        diskPanelHolder.setForeground(new java.awt.Color(153, 153, 153));
+
+        javax.swing.GroupLayout diskPanelHolderLayout = new javax.swing.GroupLayout(diskPanelHolder);
+        diskPanelHolder.setLayout(diskPanelHolderLayout);
+        diskPanelHolderLayout.setHorizontalGroup(
+            diskPanelHolderLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 146, Short.MAX_VALUE)
+        );
+        diskPanelHolderLayout.setVerticalGroup(
+            diskPanelHolderLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 0, Short.MAX_VALUE)
+        );
+
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
         jPanel3Layout.setHorizontalGroup(
@@ -489,17 +513,20 @@ public final class UIMain extends javax.swing.JFrame {
                 .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(168, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(diskPanelHolder, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addContainerGap())
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel3Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jPanel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                        .addComponent(jPanel5, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jPanel4, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                    .addComponent(diskPanelHolder, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                        .addComponent(jPanel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
@@ -689,14 +716,12 @@ public final class UIMain extends javax.swing.JFrame {
                 .addContainerGap())
         );
 
-        explorerJTree.setBackground(new java.awt.Color(255, 255, 255));
         explorerJTree.setForeground(new java.awt.Color(51, 51, 51));
         javax.swing.tree.DefaultMutableTreeNode treeNode1 = new javax.swing.tree.DefaultMutableTreeNode("root");
         explorerJTree.setModel(new javax.swing.tree.DefaultTreeModel(treeNode1));
         explorerJTree.setDropMode(javax.swing.DropMode.ON);
         jScrollPane1.setViewportView(explorerJTree);
 
-        fileJTable.setBackground(new java.awt.Color(255, 255, 255));
         fileJTable.setForeground(new java.awt.Color(51, 51, 51));
         fileJTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
@@ -1295,6 +1320,9 @@ public final class UIMain extends javax.swing.JFrame {
 
             model.insertRow(0, new Object[]{ item.getFileName(), String.valueOf(item.getFileSize()), item.getBlockIndices().toString() });
         }
+        if (diskPanel != null) {
+            diskPanel.repaint();
+        }
     }
     
     public void updateJTree() {
@@ -1492,6 +1520,7 @@ public final class UIMain extends javax.swing.JFrame {
     private javax.swing.JRadioButton adminButton;
     private javax.swing.JToggleButton deleteButton;
     private javax.swing.JTextField deletePriority;
+    private javax.swing.JPanel diskPanelHolder;
     private javax.swing.JTextField editPriority;
     private javax.swing.JTextField elementCreatedInput;
     private javax.swing.JTextField elementEditName;
