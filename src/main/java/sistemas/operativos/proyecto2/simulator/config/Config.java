@@ -11,7 +11,7 @@ public class Config {
     private final String configFile = "system_config.json";
     
     public Config() {
-        this.NUM_BLOCKS = 128;
+        this.NUM_BLOCKS = 256;
         this.policy = Policy.FIFO;
     }
     

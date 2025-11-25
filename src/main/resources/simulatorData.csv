@@ -1,0 +1,7 @@
+fileName,blocks,priority,type,path
+archivo_prueba1,2,1,FILE,root
+archivo_prueba2,4,1,FILE,root
+carpeta_prueba1,1,1,FOLDER,root
+carpeta_prueba2,1,1,FOLDER,root
+archivo_prueba3,3,1,FILE,root/carpeta_prueba1
+archivo_prueba4,1,1,FILE,root/carpeta_prueba2
