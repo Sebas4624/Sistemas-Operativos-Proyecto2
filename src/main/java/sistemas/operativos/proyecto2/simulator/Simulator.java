@@ -336,6 +336,10 @@ public class Simulator {
         currentFolder.deleteAllFolders(NUM_BLOCKS, blockFree);
     }
     
+    public void resetScheduler() {
+        this.sched.resetSchedulerState();
+    }
+    
     /*
      *   Updates
      */

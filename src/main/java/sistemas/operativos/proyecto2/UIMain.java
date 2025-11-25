@@ -53,6 +53,8 @@ public final class UIMain extends javax.swing.JFrame {
      */
     
     private void programDataLoad() {
+        this.sim.resetScheduler();
+        
         String filePath = "src/main/java/sistemas/operativos/proyecto2/simulatorData.csv";
         BufferedReader reader = null;
         String line;
@@ -135,6 +137,8 @@ public final class UIMain extends javax.swing.JFrame {
     }
     
     private void programDataSave() {
+        this.sim.resetScheduler();
+        
         String filePath = "src/main/java/sistemas/operativos/proyecto2/simulatorData.csv";
         BufferedWriter writer = null;
         
@@ -1272,6 +1276,8 @@ public final class UIMain extends javax.swing.JFrame {
         
         this.stopSchedButton.setEnabled(true);
         this.startSchedButton.setEnabled(false);
+        this.loadButton.setEnabled(false);
+        this.saveButton.setEnabled(false);
         this.policyBox.setEnabled(false);
         
         this.sim.startSchedulerExecution();
@@ -1281,6 +1287,8 @@ public final class UIMain extends javax.swing.JFrame {
         // TODO add your handling code here:
         this.stopSchedButton.setEnabled(false);
         this.startSchedButton.setEnabled(true);
+        this.loadButton.setEnabled(true);
+        this.saveButton.setEnabled(true);
         this.policyBox.setEnabled(true);
         
         this.sim.stopSchedulerExecution();

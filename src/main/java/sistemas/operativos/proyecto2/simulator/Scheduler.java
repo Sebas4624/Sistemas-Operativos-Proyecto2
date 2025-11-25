@@ -15,8 +15,8 @@ import sistemas.operativos.proyecto2.utils.Printer;
 public class Scheduler {
     public Config config;
     
-    private final Queue<Process> readyQueue;
-    private final Queue<Process> finishedQueue;
+    private Queue<Process> readyQueue;
+    private Queue<Process> finishedQueue;
     private Process currentProcess = null;
     
     public Scheduler(Config config) {
@@ -239,5 +239,11 @@ public class Scheduler {
         }
         
         return list;
+    }
+    
+    public void resetSchedulerState() {
+        this.readyQueue = new Queue();
+        this.finishedQueue = new Queue();
+        this.currentProcess = null;
     }
 }
