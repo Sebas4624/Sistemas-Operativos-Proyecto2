@@ -1,5 +1,6 @@
 package sistemas.operativos.proyecto2;
 
+import java.io.*;
 import java.util.Date;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.table.DefaultTableModel;
@@ -46,6 +47,138 @@ public final class UIMain extends javax.swing.JFrame {
             this.path = path;
         }
     }
+    
+    /*
+     *   Carga y guardado de archivos del simulador
+     */
+    
+    private void programDataLoad() {
+        this.sim.resetScheduler();
+        
+        String filePath = "src/main/java/sistemas/operativos/proyecto2/simulatorData.csv";
+        BufferedReader reader = null;
+        String line;
+
+        try {
+            reader = new BufferedReader(new FileReader(filePath));
+            while((line = reader.readLine()) != null) {
+
+                String[] row = line.split(",");
+
+                if(row[0].equals("fileName")){
+                    continue;
+                }
+
+                String fileNameInit = row[0];
+                int blocks = Integer.parseInt(row[1]);
+                int priority = Integer.parseInt(row[2]);
+                Element.Type type = Element.Type.valueOf(row[3]);
+                String[] path = row[4].split("/");
+
+                createCRUDProcess(fileNameInit, blocks, priority, type, path, CRUD.CREATE);
+            }
+        } catch(IOException e) {
+            Printer.print("Error opening file");
+        } finally {
+            try {
+                if (reader != null) reader.close();
+            } catch (IOException e) {
+                Printer.print("Error closing file");
+            }
+        }
+    }
+    
+    private void writeFile(BufferedWriter writer, FileMetadata file, String currentPath) {
+        try {
+            writer.write(
+                file.getFileName() + "," +
+                file.getFileSize()+ "," +
+                "1" + "," +
+                "File" + "," +
+                currentPath
+            );
+            writer.newLine();
+        } catch(IOException e) {
+            Printer.print("Error writing file");
+        }
+    }
+    
+    private void writeFolder(BufferedWriter writer, Folder folder, String currentPath) {
+        try {
+            LinkedList<FileMetadata> files = folder.getFiles();
+            LinkedList<Folder> folders = folder.getSubfolders();
+            
+            String nextPath = currentPath + "/" + folder.getName();
+        
+            writer.write(
+                folder.getName() + "," +
+                "1" + "," +
+                "1" + "," +
+                "FOLDER" + "," +
+                currentPath
+            );
+            writer.newLine();
+            
+            for (int i = 0; i < files.size(); i++) {
+                FileMetadata elementFile = files.get(i);
+                
+                writeFile(writer, elementFile, nextPath);
+            }
+            
+            for (int i = 0; i < folders.size(); i++) {
+                Folder elementFolder = folders.get(i);
+                
+                writeFolder(writer, elementFolder, nextPath);
+            }
+        } catch(IOException e) {
+            Printer.print("Error writing file");
+        }
+        
+    }
+    
+    private void programDataSave() {
+        this.sim.resetScheduler();
+        
+        String filePath = "src/main/java/sistemas/operativos/proyecto2/simulatorData.csv";
+        BufferedWriter writer = null;
+        
+        try {
+            writer = new BufferedWriter(new FileWriter(filePath));
+            writer.write("fileName,blocks,priority,type,path");
+            writer.newLine();
+            
+            Folder rootFolder = this.sim.rootFolder;
+            LinkedList<FileMetadata> files = rootFolder.getFiles();
+            LinkedList<Folder> folders = rootFolder.getSubfolders();
+            
+            String initPath = "root";
+            
+            for (int i = 0; i < files.size(); i++) {
+                FileMetadata elementFile = files.get(i);
+                
+                writeFile(writer, elementFile, initPath);
+            }
+            
+            for (int i = 0; i < folders.size(); i++) {
+                Folder elementFolder = folders.get(i);
+                
+                writeFolder(writer, elementFolder, initPath);
+            }
+            
+        } catch(IOException e) {
+            Printer.print("Error opening file");
+        } finally {
+            try {
+                if (writer != null) writer.close();
+            } catch (IOException e) {
+                Printer.print("Error closing file");
+            }
+        }
+    }
+    
+    /*
+     *   Inicio de la clase
+     */
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(UIMain.class.getName());
     
@@ -105,6 +238,8 @@ public final class UIMain extends javax.swing.JFrame {
         jLabel1 = new javax.swing.JLabel();
         adminButton = new javax.swing.JRadioButton();
         userButton = new javax.swing.JRadioButton();
+        saveButton = new javax.swing.JButton();
+        loadButton = new javax.swing.JButton();
         jPanel3 = new javax.swing.JPanel();
         jPanel4 = new javax.swing.JPanel();
         jLabel2 = new javax.swing.JLabel();
@@ -202,6 +337,28 @@ public final class UIMain extends javax.swing.JFrame {
             }
         });
 
+        saveButton.setBackground(new java.awt.Color(102, 102, 102));
+        saveButton.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        saveButton.setForeground(new java.awt.Color(255, 255, 255));
+        saveButton.setText("Guardar");
+        saveButton.setFocusPainted(false);
+        saveButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                saveButtonActionPerformed(evt);
+            }
+        });
+
+        loadButton.setBackground(new java.awt.Color(102, 102, 102));
+        loadButton.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        loadButton.setForeground(new java.awt.Color(255, 255, 255));
+        loadButton.setText("Cargar");
+        loadButton.setFocusPainted(false);
+        loadButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                loadButtonActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
@@ -214,7 +371,11 @@ public final class UIMain extends javax.swing.JFrame {
                         .addGap(18, 18, 18)
                         .addComponent(userButton))
                     .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(loadButton, javax.swing.GroupLayout.PREFERRED_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(saveButton, javax.swing.GroupLayout.PREFERRED_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -226,6 +387,12 @@ public final class UIMain extends javax.swing.JFrame {
                     .addComponent(adminButton)
                     .addComponent(userButton))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(saveButton, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(loadButton, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(14, 14, 14))
         );
 
         jPanel3.setBackground(new java.awt.Color(51, 51, 51));
@@ -1000,7 +1167,7 @@ public final class UIMain extends javax.swing.JFrame {
 
     private void fileButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_fileButtonActionPerformed
         // TODO add your handling code here:
-        //createFile();
+        //createFile();        
         if (fileSize.getText().trim().isEmpty()) return;
         if (filePriority.getText().trim().isEmpty()) return;
         
@@ -1105,8 +1272,12 @@ public final class UIMain extends javax.swing.JFrame {
 
     private void startSchedButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startSchedButtonActionPerformed
         // TODO add your handling code here:
+        if (this.sim.getMode() == UserMode.USER) return;
+        
         this.stopSchedButton.setEnabled(true);
         this.startSchedButton.setEnabled(false);
+        this.loadButton.setEnabled(false);
+        this.saveButton.setEnabled(false);
         this.policyBox.setEnabled(false);
         
         this.sim.startSchedulerExecution();
@@ -1116,6 +1287,8 @@ public final class UIMain extends javax.swing.JFrame {
         // TODO add your handling code here:
         this.stopSchedButton.setEnabled(false);
         this.startSchedButton.setEnabled(true);
+        this.loadButton.setEnabled(true);
+        this.saveButton.setEnabled(true);
         this.policyBox.setEnabled(true);
         
         this.sim.stopSchedulerExecution();
@@ -1153,6 +1326,17 @@ public final class UIMain extends javax.swing.JFrame {
         
         this.sim.config.setPolicy(policy);
     }//GEN-LAST:event_policyBoxActionPerformed
+
+    private void loadButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loadButtonActionPerformed
+        // TODO add your handling code here:
+        resetSimRootFolder();
+        programDataLoad();
+    }//GEN-LAST:event_loadButtonActionPerformed
+
+    private void saveButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveButtonActionPerformed
+        // TODO add your handling code here:
+        programDataSave();
+    }//GEN-LAST:event_saveButtonActionPerformed
 
     /**
      * @param args the command line arguments
@@ -1292,6 +1476,13 @@ public final class UIMain extends javax.swing.JFrame {
                 break;
             }
         }
+        
+        updateJTree();
+        updateJTable();
+    }
+    
+    public void resetSimRootFolder() {
+        this.sim.resetRootFolder();
         
         updateJTree();
         updateJTable();
@@ -1627,10 +1818,12 @@ public final class UIMain extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JScrollPane jScrollPane4;
     private javax.swing.JScrollPane jScrollPane5;
+    private javax.swing.JButton loadButton;
     private javax.swing.ButtonGroup modeGroup;
     private javax.swing.JToggleButton modifyButton;
     private javax.swing.JComboBox<String> policyBox;
     private javax.swing.JList<String> readyQueue;
+    private javax.swing.JButton saveButton;
     private javax.swing.JButton startSchedButton;
     private javax.swing.JButton stopSchedButton;
     private javax.swing.JRadioButton userButton;

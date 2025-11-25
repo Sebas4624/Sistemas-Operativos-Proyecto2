@@ -330,6 +330,16 @@ public class Simulator {
         currentFolder.deleteFolder(name, NUM_BLOCKS, blockFree);
     }
     
+    public void resetRootFolder() {
+        this.currentToRoot();
+        currentFolder.deleteAllFiles(NUM_BLOCKS, blockFree);
+        currentFolder.deleteAllFolders(NUM_BLOCKS, blockFree);
+    }
+    
+    public void resetScheduler() {
+        this.sched.resetSchedulerState();
+    }
+    
     /*
      *   Updates
      */
