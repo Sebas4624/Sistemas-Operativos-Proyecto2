@@ -2,7 +2,9 @@ package sistemas.operativos.proyecto2.simulator;
 
 import java.util.Arrays;
 import java.util.function.Consumer;
+import sistemas.operativos.proyecto2.file.FileMetadata;
 import sistemas.operativos.proyecto2.file.Folder;
+import sistemas.operativos.proyecto2.lib.LinkedList;
 import sistemas.operativos.proyecto2.simulator.config.Config;
 import sistemas.operativos.proyecto2.simulator.config.Policy;
 import sistemas.operativos.proyecto2.simulator.process.Process;
@@ -214,7 +216,8 @@ public class Simulator {
                     case Element.Type.FOLDER -> {
                         for (int i = 0; i < current.getElementPath().length; i++) {
                             if (i == current.getElementPath().length - 1 && !"root".equals(current.getElementName())) {
-                                this.getFolder(current.getElementPath()[i]).modifyFolder(current.getElementName());
+                                Folder prevFolder = this.getCurrentFolder();
+                                this.getFolder(current.getElementPath()[i]).modifyFolder(current.getElementName(), prevFolder);
                             } else {
                                 this.getFolder(current.getElementPath()[i]);
                             }
@@ -299,8 +302,19 @@ public class Simulator {
     
     public void modifyFile(String fileName, String newName) {
         if (!checkWritePermission("modifyFile")) return;
+        
+        String defName = newName;
+        LinkedList<FileMetadata> filesTemp = currentFolder.getFiles();
+
+        for (int j = 0; j < filesTemp.size(); j++) {
+            if (filesTemp.get(j).getFileName().equals(newName)) {
+                defName = newName + " (" + String.valueOf(System.currentTimeMillis()) + ")";
+                break;
+            }
+        }
+        
         currentFolder.getFile(fileName).setLastModifiedTime(System.currentTimeMillis());
-        currentFolder.getFile(fileName).setFileName(newName);
+        currentFolder.getFile(fileName).setFileName(defName);
     }
     
     public void deleteFile(String fileName) {
@@ -319,10 +333,21 @@ public class Simulator {
         return this;
     }
     
-    public void modifyFolder(String name) {
+    public void modifyFolder(String name, Folder folder) {
         if (!checkWritePermission("modifyFolder")) return;
+        
+        String defName = name;
+        LinkedList<Folder> foldersTemp = folder.getSubfolders();
+
+        for (int j = 0; j < foldersTemp.size(); j++) {
+            if (foldersTemp.get(j).getName().equals(name)) {
+                defName = name + " (" + String.valueOf(System.currentTimeMillis()) + ")";
+                break;
+            }
+        }
+        
         currentFolder.setLastModifiedTime(System.currentTimeMillis());
-        currentFolder.setName(name);
+        currentFolder.setName(defName);
     }
     
     public void deleteFolder(String name) {
