@@ -139,6 +139,25 @@ public class Simulator {
                 }
             }
             
+            case Policy.SSTF -> {
+                while (true) {
+                    if(Thread.currentThread().isInterrupted()) {
+                        return;
+                    }
+                    
+                    if (this.sched.isActive()) {
+                        this.sched.executeSSTF();
+                        if (this.sched.getCurrentProcess() != null && this.sched.getCurrentProcess().isRunning()) {                        
+                            this.executeCRUD();
+                            this.sched.getCurrentProcess().setFinished();
+                            
+                            this.executeUpdateJTable();
+                            this.executeUpdateJTree();
+                        }
+                    }
+                }
+            }
+            
         }
     }
     
