@@ -366,5 +366,10 @@ public class Simulator {
         }
         return true;
     }
+    
+    public int getNumBlocks() {
+    return NUM_BLOCKS;
+    }
+    
 
 }
