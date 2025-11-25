@@ -49,43 +49,123 @@ public final class UIMain extends javax.swing.JFrame {
     }
     
     /*
-     *   Carga de archivos del simulador
+     *   Carga y guardado de archivos del simulador
      */
     
-    private void programDataInit() {
+    private void programDataLoad() {
+        String filePath = "src/main/java/sistemas/operativos/proyecto2/simulatorData.csv";
         BufferedReader reader = null;
         String line;
 
         try {
-            reader = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream("/simulatorData.csv")));
+            reader = new BufferedReader(new FileReader(filePath));
             while((line = reader.readLine()) != null) {
 
                 String[] row = line.split(",");
 
-                try {
-                    if(row[0].equals("fileName")){
-                        continue;
-                    }
-                    
-                    String fileNameInit = row[0];
-                    int blocks = Integer.parseInt(row[1]);
-                    int priority = Integer.parseInt(row[2]);
-                    Element.Type type = Element.Type.valueOf(row[3]);
-                    String[] path = row[4].split("/");
-                    
-                    Printer.print(row[4]);
-                    Printer.print(row[4].split("/").toString());
-                    
-                    createCRUDProcess(fileNameInit, blocks, priority, type, path, CRUD.CREATE);
-                } catch(RuntimeException e) {
-                    Printer.print("Error adding process");
+                if(row[0].equals("fileName")){
+                    continue;
                 }
+
+                String fileNameInit = row[0];
+                int blocks = Integer.parseInt(row[1]);
+                int priority = Integer.parseInt(row[2]);
+                Element.Type type = Element.Type.valueOf(row[3]);
+                String[] path = row[4].split("/");
+
+                createCRUDProcess(fileNameInit, blocks, priority, type, path, CRUD.CREATE);
             }
         } catch(IOException e) {
             Printer.print("Error opening file");
         } finally {
             try {
                 if (reader != null) reader.close();
+            } catch (IOException e) {
+                Printer.print("Error closing file");
+            }
+        }
+    }
+    
+    private void writeFile(BufferedWriter writer, FileMetadata file, String currentPath) {
+        try {
+            writer.write(
+                file.getFileName() + "," +
+                file.getFileSize()+ "," +
+                "1" + "," +
+                "File" + "," +
+                currentPath
+            );
+            writer.newLine();
+        } catch(IOException e) {
+            Printer.print("Error writing file");
+        }
+    }
+    
+    private void writeFolder(BufferedWriter writer, Folder folder, String currentPath) {
+        try {
+            LinkedList<FileMetadata> files = folder.getFiles();
+            LinkedList<Folder> folders = folder.getSubfolders();
+            
+            String nextPath = currentPath + "/" + folder.getName();
+        
+            writer.write(
+                folder.getName() + "," +
+                "1" + "," +
+                "1" + "," +
+                "FOLDER" + "," +
+                currentPath
+            );
+            writer.newLine();
+            
+            for (int i = 0; i < files.size(); i++) {
+                FileMetadata elementFile = files.get(i);
+                
+                writeFile(writer, elementFile, nextPath);
+            }
+            
+            for (int i = 0; i < folders.size(); i++) {
+                Folder elementFolder = folders.get(i);
+                
+                writeFolder(writer, elementFolder, nextPath);
+            }
+        } catch(IOException e) {
+            Printer.print("Error writing file");
+        }
+        
+    }
+    
+    private void programDataSave() {
+        String filePath = "src/main/java/sistemas/operativos/proyecto2/simulatorData.csv";
+        BufferedWriter writer = null;
+        
+        try {
+            writer = new BufferedWriter(new FileWriter(filePath));
+            writer.write("fileName,blocks,priority,type,path");
+            writer.newLine();
+            
+            Folder rootFolder = this.sim.rootFolder;
+            LinkedList<FileMetadata> files = rootFolder.getFiles();
+            LinkedList<Folder> folders = rootFolder.getSubfolders();
+            
+            String initPath = "root";
+            
+            for (int i = 0; i < files.size(); i++) {
+                FileMetadata elementFile = files.get(i);
+                
+                writeFile(writer, elementFile, initPath);
+            }
+            
+            for (int i = 0; i < folders.size(); i++) {
+                Folder elementFolder = folders.get(i);
+                
+                writeFolder(writer, elementFolder, initPath);
+            }
+            
+        } catch(IOException e) {
+            Printer.print("Error opening file");
+        } finally {
+            try {
+                if (writer != null) writer.close();
             } catch (IOException e) {
                 Printer.print("Error closing file");
             }
@@ -258,6 +338,11 @@ public final class UIMain extends javax.swing.JFrame {
         saveButton.setForeground(new java.awt.Color(255, 255, 255));
         saveButton.setText("Guardar");
         saveButton.setFocusPainted(false);
+        saveButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                saveButtonActionPerformed(evt);
+            }
+        });
 
         loadButton.setBackground(new java.awt.Color(102, 102, 102));
         loadButton.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
@@ -1237,8 +1322,13 @@ public final class UIMain extends javax.swing.JFrame {
     private void loadButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loadButtonActionPerformed
         // TODO add your handling code here:
         resetSimRootFolder();
-        programDataInit();
+        programDataLoad();
     }//GEN-LAST:event_loadButtonActionPerformed
+
+    private void saveButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveButtonActionPerformed
+        // TODO add your handling code here:
+        programDataSave();
+    }//GEN-LAST:event_saveButtonActionPerformed
 
     /**
      * @param args the command line arguments
