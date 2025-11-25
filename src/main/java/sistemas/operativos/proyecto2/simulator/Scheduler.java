@@ -1,6 +1,5 @@
 package sistemas.operativos.proyecto2.simulator;
 
-import java.util.Random;
 import sistemas.operativos.proyecto2.lib.LinkedList;
 import sistemas.operativos.proyecto2.lib.Queue;
 import sistemas.operativos.proyecto2.simulator.process.Process;
@@ -96,6 +95,12 @@ public class Scheduler {
         execute(3);
     }
     
+    //   Politica de planificación SSTF (Shortest Servicer Time First)
+    
+    public void executeSSTF() {
+        execute(4);
+    }
+    
     /*
      *   Planificar procesos
      */
@@ -113,6 +118,8 @@ public class Scheduler {
                 if (currentProcess != null) {
                     currentProcess.setRunning();
                 }
+                
+                break;
             }
             
             // LIFO
@@ -126,16 +133,14 @@ public class Scheduler {
                 if (currentProcess != null) {
                     currentProcess.setRunning();
                 }
+                
+                break;
             }
             
             // RANDOM
             case 2 -> {
                 if (!readyQueue.isEmpty()) {
-                    LinkedList<Process> list = readyQueue.toLinkedList();
-                    Random rand = new Random();
-                    int randomValue = rand.nextInt(list.size());
-                    
-                    currentProcess = list.get(randomValue);
+                    currentProcess = readyQueue.pollRand();
                 } else {
                     currentProcess = null;
                 }
@@ -143,6 +148,8 @@ public class Scheduler {
                 if (currentProcess != null) {
                     currentProcess.setRunning();
                 }
+                
+                break;
             }
             
             // Priority
@@ -156,10 +163,38 @@ public class Scheduler {
                 if (currentProcess != null) {
                     currentProcess.setRunning();
                 }
+                
+                break;
             }
             
-            default -> {
+            // SSTF
+            case 4 -> {
+                if (!readyQueue.isEmpty()) {
+                    currentProcess = readyQueue.pollPath();
+                } else {
+                    currentProcess = null;
+                }
+
+                if (currentProcess != null) {
+                    currentProcess.setRunning();
+                }
                 
+                break;
+            }
+            
+            // Default: FIFO
+            default -> {
+                if (!readyQueue.isEmpty()) {
+                    currentProcess = readyQueue.dequeue();
+                } else {
+                    currentProcess = null;
+                }
+
+                if (currentProcess != null) {
+                    currentProcess.setRunning();
+                }
+                
+                break;
             }
         }
     }

@@ -9,4 +9,5 @@ public enum Policy {
     LIFO, // Last-In, First-Out
     RANDOM, // Random
     PRI, // Priority
+    SSTF, // Shortest Servicer Time First
 }

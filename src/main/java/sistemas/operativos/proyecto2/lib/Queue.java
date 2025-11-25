@@ -1,5 +1,6 @@
 package sistemas.operativos.proyecto2.lib;
 
+import java.util.Random;
 import sistemas.operativos.proyecto2.simulator.process.Process;
 
 /**
@@ -54,6 +55,82 @@ public class Queue<T> implements Iterable<T> {
                 if (best == null || p.priority() > best.priority()) {
                     best = p;
                     removal = item;
+                }
+            }
+        }
+        list.remove(removal);
+        return best;
+    }
+    
+    // Shortest Path
+    
+    public Process peekPath() {
+        if (list.size() == 0) return null;
+        
+        Process best = null;
+        
+        for(T item : list) {
+            if (item instanceof Process p) {
+                if (best == null || p.getElementPath().length < best.getElementPath().length) {
+                    best = p;
+                }
+            }
+        }
+        return best;
+    }
+    
+    public Process pollPath() {
+        if (list.size() == 0) return null;
+        
+        Process best = null;
+        T removal = null;
+        
+        for(T item : list) {
+            if (item instanceof Process p) {
+                if (best == null || p.getElementPath().length < best.getElementPath().length) {
+                    best = p;
+                    removal = item;
+                }
+            }
+        }
+        list.remove(removal);
+        return best;
+    }
+    
+    // RANDOM
+    
+    public Process peekRand() {
+        Random rand = new Random();
+        if (list.size() == 0) return null;
+        
+        int randomValue = rand.nextInt(list.size());
+        
+        Process best = null;
+        
+        for(int i = 0; i < list.size(); i++) {
+            if (i == randomValue && list.get(i) instanceof Process p) {
+                if (best == null || p.getElementPath().length < best.getElementPath().length) {
+                    best = p;
+                }
+            }
+        }
+        return best;
+    }
+    
+    public Process pollRand() {
+        Random rand = new Random();
+        if (list.size() == 0) return null;
+        
+        int randomValue = rand.nextInt(list.size());
+        
+        Process best = null;
+        T removal = null;
+        
+        for(int i = 0; i < list.size(); i++) {
+            if (i == randomValue && list.get(i) instanceof Process p) {
+                if (best == null || p.getElementPath().length < best.getElementPath().length) {
+                    best = p;
+                    removal = list.get(i);
                 }
             }
         }
