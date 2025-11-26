@@ -67,6 +67,18 @@ public class HashTable<T> {
         return this.list[assign];
     }
     
+    public LinkedList<T> getAllValues() {
+        LinkedList<T> res = new LinkedList();
+        
+        for (int i = 0; i < this.tSize; i++) {
+            for (int j = 0; j < this.list[i].size(); j++) {
+                res.addLast(this.list[i].get(j));
+            }
+        }
+        
+        return res;
+    }
+    
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder().append('[');

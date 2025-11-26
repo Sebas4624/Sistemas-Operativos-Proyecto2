@@ -1,0 +1,1777 @@
+package sistemas.operativos.proyecto2;
+
+import java.io.*;
+import java.util.Date;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
+import sistemas.operativos.proyecto2.file.FileMetadata;
+import sistemas.operativos.proyecto2.file.Folder;
+import sistemas.operativos.proyecto2.lib.LinkedList;
+import sistemas.operativos.proyecto2.simulator.Simulator;
+import sistemas.operativos.proyecto2.simulator.Simulator.UserMode;
+import sistemas.operativos.proyecto2.simulator.config.Config;
+import sistemas.operativos.proyecto2.simulator.config.Policy;
+import sistemas.operativos.proyecto2.simulator.process.CRUD;
+import sistemas.operativos.proyecto2.simulator.process.Element;
+import sistemas.operativos.proyecto2.utils.Printer;
+
+
+/**
+ *
+ * @author sebas
+ */
+public final class UIMain extends javax.swing.JFrame {
+    public enum ElementType {
+        FILE,
+        FOLDER
+    }
+    
+    private class TreeNodeSelection {
+        public String name;
+        public int size;
+        public LinkedList<Integer> indices;
+        public ElementType type;
+        public long creation;
+        public long lastModified;
+        public String[] path;
+        
+        public TreeNodeSelection(String name, int size, LinkedList<Integer> indices, ElementType type, long creation, long lastModified, String[] path) {
+            this.name = name;
+            this.size = size;
+            this.indices = indices;
+            this.type = type;
+            this.creation = creation;
+            this.lastModified = lastModified;
+            this.path = path;
+        }
+    }
+    
+    /*
+     *   Carga y guardado de archivos del simulador
+     */
+    
+    private void programDataLoad() {
+        this.sim.resetScheduler();
+        
+        String filePath = "src/main/java/sistemas/operativos/proyecto2/simulatorData.csv";
+        BufferedReader reader = null;
+        String line;
+
+        try {
+            reader = new BufferedReader(new FileReader(filePath));
+            while((line = reader.readLine()) != null) {
+
+                String[] row = line.split(",");
+
+                if(row[0].equals("fileName")){
+                    continue;
+                }
+
+                String fileNameInit = row[0];
+                int blocks = Integer.parseInt(row[1]);
+                int priority = Integer.parseInt(row[2]);
+                Element.Type type = Element.Type.valueOf(row[3]);
+                String[] path = row[4].split("/");
+
+                createCRUDProcess(fileNameInit, blocks, priority, type, path, CRUD.CREATE);
+            }
+        } catch(IOException e) {
+            Printer.print("Error opening file");
+        } finally {
+            try {
+                if (reader != null) reader.close();
+            } catch (IOException e) {
+                Printer.print("Error closing file");
+            }
+        }
+    }
+    
+    private void writeFile(BufferedWriter writer, FileMetadata file, String currentPath) {
+        try {
+            writer.write(
+                file.getFileName() + "," +
+                file.getFileSize()+ "," +
+                "1" + "," +
+                "File" + "," +
+                currentPath
+            );
+            writer.newLine();
+        } catch(IOException e) {
+            Printer.print("Error writing file");
+        }
+    }
+    
+    private void writeFolder(BufferedWriter writer, Folder folder, String currentPath) {
+        try {
+            LinkedList<FileMetadata> files = folder.getFiles();
+            LinkedList<Folder> folders = folder.getSubfolders();
+            
+            String nextPath = currentPath + "/" + folder.getName();
+        
+            writer.write(
+                folder.getName() + "," +
+                "1" + "," +
+                "1" + "," +
+                "FOLDER" + "," +
+                currentPath
+            );
+            writer.newLine();
+            
+            for (int i = 0; i < files.size(); i++) {
+                FileMetadata elementFile = files.get(i);
+                
+                writeFile(writer, elementFile, nextPath);
+            }
+            
+            for (int i = 0; i < folders.size(); i++) {
+                Folder elementFolder = folders.get(i);
+                
+                writeFolder(writer, elementFolder, nextPath);
+            }
+        } catch(IOException e) {
+            Printer.print("Error writing file");
+        }
+        
+    }
+    
+    private void programDataSave() {
+        this.sim.resetScheduler();
+        
+        String filePath = "src/main/java/sistemas/operativos/proyecto2/simulatorData.csv";
+        BufferedWriter writer = null;
+        
+        try {
+            writer = new BufferedWriter(new FileWriter(filePath));
+            writer.write("fileName,blocks,priority,type,path");
+            writer.newLine();
+            
+            Folder rootFolder = this.sim.rootFolder;
+            LinkedList<FileMetadata> files = rootFolder.getFiles();
+            LinkedList<Folder> folders = rootFolder.getSubfolders();
+            
+            String initPath = "root";
+            
+            for (int i = 0; i < files.size(); i++) {
+                FileMetadata elementFile = files.get(i);
+                
+                writeFile(writer, elementFile, initPath);
+            }
+            
+            for (int i = 0; i < folders.size(); i++) {
+                Folder elementFolder = folders.get(i);
+                
+                writeFolder(writer, elementFolder, initPath);
+            }
+            
+        } catch(IOException e) {
+            Printer.print("Error opening file");
+        } finally {
+            try {
+                if (writer != null) writer.close();
+            } catch (IOException e) {
+                Printer.print("Error closing file");
+            }
+        }
+    }
+    
+    /*
+     *   Inicio de la clase
+     */
+    
+    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(UIMain.class.getName());
+    
+    private final Config config;
+    private final Simulator sim;
+    
+    private TreeNodeSelection selected;
+    private LinkedList<FileMetadata> fileTableList;
+    private final DiskPanel diskPanel;
+
+
+    /**
+     * Creates new form UIMain
+     */
+    public UIMain() {
+        initComponents();
+        initEvents();
+        
+        this.config = new Config();
+        this.sim = new Simulator(config);
+        this.diskPanel = new DiskPanel(this.sim);
+
+        diskPanelHolder.setLayout(new java.awt.BorderLayout());
+        diskPanelHolder.add(diskPanel, java.awt.BorderLayout.CENTER);
+        
+        
+        String[] rootPath = {"root"};
+        
+        Folder rootStart = this.sim.getCurrentFolder();
+        this.selected = new TreeNodeSelection(rootStart.getName(), 0, null, ElementType.FOLDER, rootStart.getCreationTime(), rootStart.getLastModifiedTime(), rootPath);
+        this.fileTableList = new LinkedList();
+        
+        passJTreeToSimulator();
+        passJTableToSimulator();
+        
+        this.sim.setMode(UserMode.USER);
+        updateMode();
+        
+        updateJTable();
+        updateJTree();
+        updateSelectedElement();
+        updateSchedData();
+    }
+
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        modeGroup = new javax.swing.ButtonGroup();
+        jPanel1 = new javax.swing.JPanel();
+        jPanel2 = new javax.swing.JPanel();
+        jLabel1 = new javax.swing.JLabel();
+        adminButton = new javax.swing.JRadioButton();
+        userButton = new javax.swing.JRadioButton();
+        saveButton = new javax.swing.JButton();
+        loadButton = new javax.swing.JButton();
+        resetButton = new javax.swing.JButton();
+        cleanButton = new javax.swing.JButton();
+        jPanel3 = new javax.swing.JPanel();
+        jPanel4 = new javax.swing.JPanel();
+        jLabel2 = new javax.swing.JLabel();
+        jLabel3 = new javax.swing.JLabel();
+        fileName = new javax.swing.JTextField();
+        fileSize = new javax.swing.JTextField();
+        jLabel4 = new javax.swing.JLabel();
+        fileButton = new javax.swing.JToggleButton();
+        filePriority = new javax.swing.JTextField();
+        jLabel16 = new javax.swing.JLabel();
+        jPanel5 = new javax.swing.JPanel();
+        jLabel5 = new javax.swing.JLabel();
+        jLabel6 = new javax.swing.JLabel();
+        folderName = new javax.swing.JTextField();
+        folderButton = new javax.swing.JToggleButton();
+        folderPriority = new javax.swing.JTextField();
+        jLabel15 = new javax.swing.JLabel();
+        jPanel7 = new javax.swing.JPanel();
+        jLabel8 = new javax.swing.JLabel();
+        jLabel9 = new javax.swing.JLabel();
+        elementEditName = new javax.swing.JTextField();
+        modifyButton = new javax.swing.JToggleButton();
+        editPriority = new javax.swing.JTextField();
+        jLabel17 = new javax.swing.JLabel();
+        jPanel11 = new javax.swing.JPanel();
+        jLabel12 = new javax.swing.JLabel();
+        executingField = new javax.swing.JTextField();
+        policyBox = new javax.swing.JComboBox<>();
+        jLabel10 = new javax.swing.JLabel();
+        jPanel6 = new javax.swing.JPanel();
+        jLabel7 = new javax.swing.JLabel();
+        elementSize = new javax.swing.JLabel();
+        elementNameInput = new javax.swing.JTextField();
+        elementName = new javax.swing.JLabel();
+        elementSizeInput = new javax.swing.JTextField();
+        elementName1 = new javax.swing.JLabel();
+        elementTypeInput = new javax.swing.JTextField();
+        elementName2 = new javax.swing.JLabel();
+        elementCreatedInput = new javax.swing.JTextField();
+        elementName3 = new javax.swing.JLabel();
+        elementModifiedInput = new javax.swing.JTextField();
+        elementName4 = new javax.swing.JLabel();
+        elementIndicesInput = new javax.swing.JTextField();
+        deleteButton = new javax.swing.JToggleButton();
+        deletePriority = new javax.swing.JTextField();
+        jLabel18 = new javax.swing.JLabel();
+        jLabel11 = new javax.swing.JLabel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        explorerJTree = new javax.swing.JTree();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        fileJTable = new javax.swing.JTable();
+        jPanel8 = new javax.swing.JPanel();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        readyQueue = new javax.swing.JList<>();
+        jScrollPane4 = new javax.swing.JScrollPane();
+        finishedQueue = new javax.swing.JList<>();
+        startSchedButton = new javax.swing.JButton();
+        stopSchedButton = new javax.swing.JButton();
+        jLabel13 = new javax.swing.JLabel();
+        jLabel14 = new javax.swing.JLabel();
+        jScrollPane5 = new javax.swing.JScrollPane();
+        diskPanelHolder = new javax.swing.JPanel();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+
+        jPanel1.setBackground(new java.awt.Color(34, 34, 34));
+
+        jPanel2.setBackground(new java.awt.Color(51, 51, 51));
+
+        jLabel1.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel1.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel1.setText("Modo de Uso");
+
+        adminButton.setBackground(new java.awt.Color(51, 51, 51));
+        modeGroup.add(adminButton);
+        adminButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        adminButton.setForeground(new java.awt.Color(255, 255, 255));
+        adminButton.setText("Admin");
+        adminButton.setFocusPainted(false);
+        adminButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                adminButtonActionPerformed(evt);
+            }
+        });
+
+        userButton.setBackground(new java.awt.Color(51, 51, 51));
+        modeGroup.add(userButton);
+        userButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        userButton.setForeground(new java.awt.Color(255, 255, 255));
+        userButton.setSelected(true);
+        userButton.setText("Usuario");
+        userButton.setFocusPainted(false);
+        userButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                userButtonActionPerformed(evt);
+            }
+        });
+
+        saveButton.setBackground(new java.awt.Color(102, 102, 102));
+        saveButton.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        saveButton.setForeground(new java.awt.Color(255, 255, 255));
+        saveButton.setText("Guardar");
+        saveButton.setFocusPainted(false);
+        saveButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                saveButtonActionPerformed(evt);
+            }
+        });
+
+        loadButton.setBackground(new java.awt.Color(102, 102, 102));
+        loadButton.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        loadButton.setForeground(new java.awt.Color(255, 255, 255));
+        loadButton.setText("Cargar");
+        loadButton.setFocusPainted(false);
+        loadButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                loadButtonActionPerformed(evt);
+            }
+        });
+
+        resetButton.setBackground(new java.awt.Color(102, 102, 102));
+        resetButton.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        resetButton.setForeground(new java.awt.Color(255, 255, 255));
+        resetButton.setText("Reiniciar Planificador");
+        resetButton.setFocusPainted(false);
+        resetButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                resetButtonActionPerformed(evt);
+            }
+        });
+
+        cleanButton.setBackground(new java.awt.Color(102, 102, 102));
+        cleanButton.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        cleanButton.setForeground(new java.awt.Color(255, 255, 255));
+        cleanButton.setText("Limpiar Raíz");
+        cleanButton.setFocusPainted(false);
+        cleanButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cleanButtonActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
+        jPanel2.setLayout(jPanel2Layout);
+        jPanel2Layout.setHorizontalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addComponent(adminButton)
+                        .addGap(18, 18, 18)
+                        .addComponent(userButton))
+                    .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(cleanButton)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(resetButton)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(loadButton, javax.swing.GroupLayout.PREFERRED_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(saveButton, javax.swing.GroupLayout.PREFERRED_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
+        );
+        jPanel2Layout.setVerticalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addGap(8, 8, 8)
+                .addComponent(jLabel1)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(adminButton)
+                    .addComponent(userButton))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(saveButton, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(loadButton, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(resetButton, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(cleanButton, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(14, 14, 14))
+        );
+
+        jPanel3.setBackground(new java.awt.Color(51, 51, 51));
+
+        jPanel4.setBackground(new java.awt.Color(102, 102, 102));
+
+        jLabel2.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel2.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel2.setText("Archivo (Carpeta Actual)");
+
+        jLabel3.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel3.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel3.setText("Nombre");
+
+        fileName.setBackground(new java.awt.Color(51, 51, 51));
+        fileName.setForeground(new java.awt.Color(255, 255, 255));
+        fileName.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                fileNameActionPerformed(evt);
+            }
+        });
+
+        fileSize.setBackground(new java.awt.Color(51, 51, 51));
+        fileSize.setForeground(new java.awt.Color(255, 255, 255));
+        fileSize.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                fileSizeActionPerformed(evt);
+            }
+        });
+
+        jLabel4.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel4.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel4.setText("Tamaño (bloques)");
+
+        fileButton.setBackground(new java.awt.Color(51, 51, 51));
+        fileButton.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        fileButton.setForeground(new java.awt.Color(255, 255, 255));
+        fileButton.setText("Crear Archivo");
+        fileButton.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
+        fileButton.setFocusPainted(false);
+        fileButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                fileButtonActionPerformed(evt);
+            }
+        });
+
+        filePriority.setBackground(new java.awt.Color(51, 51, 51));
+        filePriority.setForeground(new java.awt.Color(255, 255, 255));
+        filePriority.setText("1");
+        filePriority.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                filePriorityActionPerformed(evt);
+            }
+        });
+
+        jLabel16.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel16.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel16.setText("Prioridad");
+
+        javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
+        jPanel4.setLayout(jPanel4Layout);
+        jPanel4Layout.setHorizontalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel4Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel4Layout.createSequentialGroup()
+                        .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 56, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(fileName))
+                    .addComponent(fileButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(jPanel4Layout.createSequentialGroup()
+                        .addComponent(jLabel2)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addGroup(jPanel4Layout.createSequentialGroup()
+                        .addComponent(jLabel4)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(fileSize, javax.swing.GroupLayout.DEFAULT_SIZE, 80, Short.MAX_VALUE))
+                    .addGroup(jPanel4Layout.createSequentialGroup()
+                        .addComponent(jLabel16)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(filePriority)))
+                .addContainerGap())
+        );
+        jPanel4Layout.setVerticalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel4Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel2)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel3)
+                    .addComponent(fileName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel4)
+                    .addComponent(fileSize, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel16)
+                    .addComponent(filePriority, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(fileButton)
+                .addContainerGap())
+        );
+
+        jPanel5.setBackground(new java.awt.Color(102, 102, 102));
+
+        jLabel5.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel5.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel5.setText("Carpeta (Carpeta Actual)");
+
+        jLabel6.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel6.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel6.setText("Nombre");
+
+        folderName.setBackground(new java.awt.Color(51, 51, 51));
+        folderName.setForeground(new java.awt.Color(255, 255, 255));
+        folderName.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                folderNameActionPerformed(evt);
+            }
+        });
+
+        folderButton.setBackground(new java.awt.Color(51, 51, 51));
+        folderButton.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        folderButton.setForeground(new java.awt.Color(255, 255, 255));
+        folderButton.setText("Crear Carpeta");
+        folderButton.setFocusPainted(false);
+        folderButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                folderButtonActionPerformed(evt);
+            }
+        });
+
+        folderPriority.setBackground(new java.awt.Color(51, 51, 51));
+        folderPriority.setForeground(new java.awt.Color(255, 255, 255));
+        folderPriority.setText("1");
+        folderPriority.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                folderPriorityActionPerformed(evt);
+            }
+        });
+
+        jLabel15.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel15.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel15.setText("Prioridad");
+
+        javax.swing.GroupLayout jPanel5Layout = new javax.swing.GroupLayout(jPanel5);
+        jPanel5.setLayout(jPanel5Layout);
+        jPanel5Layout.setHorizontalGroup(
+            jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel5Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel5Layout.createSequentialGroup()
+                        .addComponent(jLabel5)
+                        .addGap(0, 44, Short.MAX_VALUE))
+                    .addGroup(jPanel5Layout.createSequentialGroup()
+                        .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 56, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(folderName))
+                    .addComponent(folderButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(jPanel5Layout.createSequentialGroup()
+                        .addComponent(jLabel15, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(folderPriority)))
+                .addContainerGap())
+        );
+        jPanel5Layout.setVerticalGroup(
+            jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel5Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel5)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel6)
+                    .addComponent(folderName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel15)
+                    .addComponent(folderPriority, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(folderButton)
+                .addContainerGap())
+        );
+
+        jPanel7.setBackground(new java.awt.Color(102, 102, 102));
+
+        jLabel8.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel8.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel8.setText("Editar Actual");
+
+        jLabel9.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel9.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel9.setText("Nombre");
+
+        elementEditName.setBackground(new java.awt.Color(51, 51, 51));
+        elementEditName.setForeground(new java.awt.Color(255, 255, 255));
+        elementEditName.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                elementEditNameActionPerformed(evt);
+            }
+        });
+
+        modifyButton.setBackground(new java.awt.Color(51, 51, 51));
+        modifyButton.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        modifyButton.setForeground(new java.awt.Color(255, 255, 255));
+        modifyButton.setText("Modificar Elemento");
+        modifyButton.setFocusPainted(false);
+        modifyButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                modifyButtonActionPerformed(evt);
+            }
+        });
+
+        editPriority.setBackground(new java.awt.Color(51, 51, 51));
+        editPriority.setForeground(new java.awt.Color(255, 255, 255));
+        editPriority.setText("1");
+        editPriority.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                editPriorityActionPerformed(evt);
+            }
+        });
+
+        jLabel17.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel17.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel17.setText("Prioridad");
+
+        javax.swing.GroupLayout jPanel7Layout = new javax.swing.GroupLayout(jPanel7);
+        jPanel7.setLayout(jPanel7Layout);
+        jPanel7Layout.setHorizontalGroup(
+            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel7Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel7Layout.createSequentialGroup()
+                        .addComponent(jLabel8)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addGroup(jPanel7Layout.createSequentialGroup()
+                        .addComponent(jLabel9, javax.swing.GroupLayout.PREFERRED_SIZE, 56, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(elementEditName))
+                    .addComponent(modifyButton, javax.swing.GroupLayout.DEFAULT_SIZE, 209, Short.MAX_VALUE)
+                    .addGroup(jPanel7Layout.createSequentialGroup()
+                        .addComponent(jLabel17)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(editPriority)))
+                .addContainerGap())
+        );
+        jPanel7Layout.setVerticalGroup(
+            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel7Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel8)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel9)
+                    .addComponent(elementEditName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel17)
+                    .addComponent(editPriority, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(modifyButton)
+                .addContainerGap())
+        );
+
+        jPanel11.setBackground(new java.awt.Color(102, 102, 102));
+
+        jLabel12.setBackground(new java.awt.Color(51, 51, 51));
+        jLabel12.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        jLabel12.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel12.setText("Ejecutando");
+
+        executingField.setBackground(new java.awt.Color(51, 51, 51));
+        executingField.setForeground(new java.awt.Color(255, 255, 255));
+        executingField.setEnabled(false);
+        executingField.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                executingFieldActionPerformed(evt);
+            }
+        });
+
+        policyBox.setBackground(new java.awt.Color(51, 51, 51));
+        policyBox.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        policyBox.setForeground(new java.awt.Color(255, 255, 255));
+        policyBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "FIFO", "LIFO", "RANDOM", "PRI", "SSTF" }));
+        policyBox.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                policyBoxActionPerformed(evt);
+            }
+        });
+
+        jLabel10.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel10.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel10.setText("Política de Planificación");
+
+        javax.swing.GroupLayout jPanel11Layout = new javax.swing.GroupLayout(jPanel11);
+        jPanel11.setLayout(jPanel11Layout);
+        jPanel11Layout.setHorizontalGroup(
+            jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel11Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(executingField, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(policyBox, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(jPanel11Layout.createSequentialGroup()
+                        .addGroup(jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel12, javax.swing.GroupLayout.PREFERRED_SIZE, 104, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel10))
+                        .addGap(0, 30, Short.MAX_VALUE)))
+                .addContainerGap())
+        );
+        jPanel11Layout.setVerticalGroup(
+            jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel11Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel12, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(executingField, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jLabel10)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(policyBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
+        );
+
+        javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
+        jPanel3.setLayout(jPanel3Layout);
+        jPanel3Layout.setHorizontalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jPanel11, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
+        );
+        jPanel3Layout.setVerticalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jPanel11, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(jPanel3Layout.createSequentialGroup()
+                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(jPanel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addGap(0, 0, Short.MAX_VALUE)))
+                .addContainerGap())
+        );
+
+        jPanel6.setBackground(new java.awt.Color(102, 102, 102));
+
+        jLabel7.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        jLabel7.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel7.setText("Elemento Actual");
+
+        elementSize.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        elementSize.setForeground(new java.awt.Color(255, 255, 255));
+        elementSize.setText("Tamaño (bloques)");
+
+        elementNameInput.setBackground(new java.awt.Color(51, 51, 51));
+        elementNameInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementNameInput.setEnabled(false);
+        elementNameInput.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                elementNameInputActionPerformed(evt);
+            }
+        });
+
+        elementName.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        elementName.setForeground(new java.awt.Color(255, 255, 255));
+        elementName.setText("Nombre");
+
+        elementSizeInput.setBackground(new java.awt.Color(51, 51, 51));
+        elementSizeInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementSizeInput.setEnabled(false);
+        elementSizeInput.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                elementSizeInputActionPerformed(evt);
+            }
+        });
+
+        elementName1.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        elementName1.setForeground(new java.awt.Color(255, 255, 255));
+        elementName1.setText("Tipo de elemento");
+
+        elementTypeInput.setBackground(new java.awt.Color(51, 51, 51));
+        elementTypeInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementTypeInput.setEnabled(false);
+        elementTypeInput.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                elementTypeInputActionPerformed(evt);
+            }
+        });
+
+        elementName2.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        elementName2.setForeground(new java.awt.Color(255, 255, 255));
+        elementName2.setText("Creado");
+
+        elementCreatedInput.setBackground(new java.awt.Color(51, 51, 51));
+        elementCreatedInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementCreatedInput.setEnabled(false);
+        elementCreatedInput.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                elementCreatedInputActionPerformed(evt);
+            }
+        });
+
+        elementName3.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        elementName3.setForeground(new java.awt.Color(255, 255, 255));
+        elementName3.setText("Editado");
+
+        elementModifiedInput.setBackground(new java.awt.Color(51, 51, 51));
+        elementModifiedInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementModifiedInput.setEnabled(false);
+        elementModifiedInput.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                elementModifiedInputActionPerformed(evt);
+            }
+        });
+
+        elementName4.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        elementName4.setForeground(new java.awt.Color(255, 255, 255));
+        elementName4.setText("Índices");
+
+        elementIndicesInput.setBackground(new java.awt.Color(51, 51, 51));
+        elementIndicesInput.setForeground(new java.awt.Color(255, 255, 255));
+        elementIndicesInput.setEnabled(false);
+        elementIndicesInput.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                elementIndicesInputActionPerformed(evt);
+            }
+        });
+
+        deleteButton.setBackground(new java.awt.Color(51, 51, 51));
+        deleteButton.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        deleteButton.setForeground(new java.awt.Color(255, 255, 255));
+        deleteButton.setText("Borrar Elemento");
+        deleteButton.setFocusPainted(false);
+        deleteButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                deleteButtonActionPerformed(evt);
+            }
+        });
+
+        deletePriority.setBackground(new java.awt.Color(51, 51, 51));
+        deletePriority.setForeground(new java.awt.Color(255, 255, 255));
+        deletePriority.setText("1");
+        deletePriority.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                deletePriorityActionPerformed(evt);
+            }
+        });
+
+        jLabel18.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel18.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel18.setText("Prioridad");
+
+        jLabel11.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel11.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel11.setText("Eliminar Actual");
+
+        javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
+        jPanel6.setLayout(jPanel6Layout);
+        jPanel6Layout.setHorizontalGroup(
+            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel6Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addComponent(elementName, javax.swing.GroupLayout.PREFERRED_SIZE, 56, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(elementNameInput))
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addComponent(elementName1)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(elementTypeInput))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel6Layout.createSequentialGroup()
+                        .addComponent(elementName2)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(elementCreatedInput))
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addComponent(elementName4)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(elementIndicesInput))
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addComponent(elementSize)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(elementSizeInput, javax.swing.GroupLayout.DEFAULT_SIZE, 105, Short.MAX_VALUE))
+                    .addComponent(deleteButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addComponent(jLabel18)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(deletePriority))
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addComponent(elementName3)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(elementModifiedInput))
+                    .addGroup(jPanel6Layout.createSequentialGroup()
+                        .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel7)
+                            .addComponent(jLabel11))
+                        .addGap(0, 0, Short.MAX_VALUE)))
+                .addContainerGap())
+        );
+        jPanel6Layout.setVerticalGroup(
+            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel6Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel7)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(elementName)
+                    .addComponent(elementNameInput, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(elementSize)
+                    .addComponent(elementSizeInput, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(elementName4)
+                    .addComponent(elementIndicesInput, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(elementName1)
+                    .addComponent(elementTypeInput, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(elementName2)
+                    .addComponent(elementCreatedInput, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(elementName3)
+                    .addComponent(elementModifiedInput, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
+                .addComponent(jLabel11, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel18)
+                    .addComponent(deletePriority, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(deleteButton)
+                .addContainerGap())
+        );
+
+        explorerJTree.setForeground(new java.awt.Color(51, 51, 51));
+        javax.swing.tree.DefaultMutableTreeNode treeNode1 = new javax.swing.tree.DefaultMutableTreeNode("root");
+        explorerJTree.setModel(new javax.swing.tree.DefaultTreeModel(treeNode1));
+        explorerJTree.setDropMode(javax.swing.DropMode.ON);
+        jScrollPane1.setViewportView(explorerJTree);
+
+        fileJTable.setForeground(new java.awt.Color(51, 51, 51));
+        fileJTable.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null},
+                {null, null, null},
+                {null, null, null},
+                {null, null, null},
+                {null, null, null}
+            },
+            new String [] {
+                "Nombre", "Tamaño", "Índices"
+            }
+        ) {
+            Class[] types = new Class [] {
+                java.lang.String.class, java.lang.String.class, java.lang.String.class
+            };
+            boolean[] canEdit = new boolean [] {
+                false, false, false
+            };
+
+            public Class getColumnClass(int columnIndex) {
+                return types [columnIndex];
+            }
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        fileJTable.setSelectionBackground(new java.awt.Color(102, 102, 102));
+        fileJTable.setSelectionForeground(new java.awt.Color(255, 255, 255));
+        jScrollPane2.setViewportView(fileJTable);
+
+        jPanel8.setBackground(new java.awt.Color(51, 51, 51));
+        jPanel8.setForeground(new java.awt.Color(255, 255, 255));
+
+        readyQueue.setBackground(new java.awt.Color(51, 51, 51));
+        readyQueue.setForeground(new java.awt.Color(255, 255, 255));
+        readyQueue.setModel(new javax.swing.AbstractListModel<String>() {
+            String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
+            public int getSize() { return strings.length; }
+            public String getElementAt(int i) { return strings[i]; }
+        });
+        readyQueue.setToolTipText("");
+        jScrollPane3.setViewportView(readyQueue);
+
+        finishedQueue.setBackground(new java.awt.Color(51, 51, 51));
+        finishedQueue.setForeground(new java.awt.Color(255, 255, 255));
+        finishedQueue.setModel(new javax.swing.AbstractListModel<String>() {
+            String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
+            public int getSize() { return strings.length; }
+            public String getElementAt(int i) { return strings[i]; }
+        });
+        jScrollPane4.setViewportView(finishedQueue);
+
+        startSchedButton.setBackground(new java.awt.Color(102, 102, 102));
+        startSchedButton.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        startSchedButton.setForeground(new java.awt.Color(255, 255, 255));
+        startSchedButton.setText("Iniciar");
+        startSchedButton.setFocusPainted(false);
+        startSchedButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                startSchedButtonActionPerformed(evt);
+            }
+        });
+
+        stopSchedButton.setBackground(new java.awt.Color(102, 102, 102));
+        stopSchedButton.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        stopSchedButton.setForeground(new java.awt.Color(255, 255, 255));
+        stopSchedButton.setText("Pausar");
+        stopSchedButton.setEnabled(false);
+        stopSchedButton.setFocusPainted(false);
+        stopSchedButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                stopSchedButtonActionPerformed(evt);
+            }
+        });
+
+        jLabel13.setBackground(new java.awt.Color(51, 51, 51));
+        jLabel13.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel13.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel13.setText("Listos");
+
+        jLabel14.setBackground(new java.awt.Color(51, 51, 51));
+        jLabel14.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel14.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel14.setText("Terminados");
+
+        javax.swing.GroupLayout jPanel8Layout = new javax.swing.GroupLayout(jPanel8);
+        jPanel8.setLayout(jPanel8Layout);
+        jPanel8Layout.setHorizontalGroup(
+            jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel8Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                    .addComponent(jLabel13, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jScrollPane3, javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(startSchedButton, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 114, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jLabel14, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jScrollPane4)
+                    .addComponent(stopSchedButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap())
+        );
+        jPanel8Layout.setVerticalGroup(
+            jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel8Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel13, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel14, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane4)
+                    .addComponent(jScrollPane3))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(startSchedButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(stopSchedButton, javax.swing.GroupLayout.DEFAULT_SIZE, 39, Short.MAX_VALUE))
+                .addContainerGap())
+        );
+
+        diskPanelHolder.setBackground(new java.awt.Color(102, 102, 102));
+        diskPanelHolder.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Mapa de bloques del disco", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Segoe UI", 0, 12), new java.awt.Color(255, 255, 255))); // NOI18N
+        diskPanelHolder.setForeground(new java.awt.Color(153, 153, 153));
+
+        javax.swing.GroupLayout diskPanelHolderLayout = new javax.swing.GroupLayout(diskPanelHolder);
+        diskPanelHolder.setLayout(diskPanelHolderLayout);
+        diskPanelHolderLayout.setHorizontalGroup(
+            diskPanelHolderLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 356, Short.MAX_VALUE)
+        );
+        diskPanelHolderLayout.setVerticalGroup(
+            diskPanelHolderLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 313, Short.MAX_VALUE)
+        );
+
+        jScrollPane5.setViewportView(diskPanelHolder);
+
+        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
+        jPanel1.setLayout(jPanel1Layout);
+        jPanel1Layout.setHorizontalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addComponent(jScrollPane1)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 261, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jScrollPane5, javax.swing.GroupLayout.PREFERRED_SIZE, 360, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(jPanel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jPanel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap())
+        );
+        jPanel1Layout.setVerticalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jPanel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
+                    .addComponent(jPanel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jScrollPane5))
+                .addContainerGap())
+        );
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+        getContentPane().setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+        );
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void adminButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_adminButtonActionPerformed
+        // TODO add your handling code here:
+        if (adminButton.isSelected()) {
+            this.sim.setMode(UserMode.ADMIN);
+            updateMode();
+        }
+    }//GEN-LAST:event_adminButtonActionPerformed
+
+    private void userButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_userButtonActionPerformed
+        // TODO add your handling code here:
+        if (userButton.isSelected()) {
+            this.sim.setMode(UserMode.USER);
+            updateMode();
+        }
+    }//GEN-LAST:event_userButtonActionPerformed
+
+    private void fileNameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_fileNameActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_fileNameActionPerformed
+
+    private void fileSizeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_fileSizeActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_fileSizeActionPerformed
+
+    private void folderNameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_folderNameActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_folderNameActionPerformed
+
+    private void fileButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_fileButtonActionPerformed
+        // TODO add your handling code here:
+        //createFile();        
+        if (fileSize.getText().trim().isEmpty()) return;
+        if (filePriority.getText().trim().isEmpty()) return;
+        
+        String name = fileName.getText().trim();
+        int size = Integer.parseInt(fileSize.getText().trim());
+        int priority = Integer.parseInt(filePriority.getText().trim());
+        
+        if (name.isEmpty() || size < 1 || priority < 0) return;
+        
+        createCRUDProcess(name, size, priority, Element.Type.FILE, selected.path, CRUD.CREATE);
+    }//GEN-LAST:event_fileButtonActionPerformed
+
+    private void folderButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_folderButtonActionPerformed
+        // TODO add your handling code here:
+        //createFolder();
+        if (folderPriority.getText().trim().isEmpty()) return;
+        
+        String name = folderName.getText().trim();
+        int size = 1;
+        int priority = Integer.parseInt(folderPriority.getText().trim());
+        
+        if (name.isEmpty() || size < 1 || priority < 0) return;
+        
+        createCRUDProcess(name, size, priority, Element.Type.FOLDER, selected.path, CRUD.CREATE);
+    }//GEN-LAST:event_folderButtonActionPerformed
+
+    private void elementNameInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_elementNameInputActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_elementNameInputActionPerformed
+
+    private void elementSizeInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_elementSizeInputActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_elementSizeInputActionPerformed
+
+    private void elementTypeInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_elementTypeInputActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_elementTypeInputActionPerformed
+
+    private void elementCreatedInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_elementCreatedInputActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_elementCreatedInputActionPerformed
+
+    private void elementModifiedInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_elementModifiedInputActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_elementModifiedInputActionPerformed
+
+    private void elementIndicesInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_elementIndicesInputActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_elementIndicesInputActionPerformed
+
+    private void modifyButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_modifyButtonActionPerformed
+        // TODO add your handling code here:
+        //modifyElement();
+        if (editPriority.getText().trim().isEmpty()) return;
+        
+        String name = elementEditName.getText().trim();
+        Element.Type type;
+        int size = selected.size;
+        int priority = Integer.parseInt(editPriority.getText().trim());
+        
+        if (selected.type == ElementType.FILE) {
+            type = Element.Type.FILE;
+        } else {
+            type = Element.Type.FOLDER;
+        }
+        
+        if (name.isEmpty() || priority < 0) return;
+        if ((type == Element.Type.FILE && priority < 1) || (type == Element.Type.FOLDER && priority < 0)) return;
+        
+        createCRUDProcess(name, size, priority, type, selected.path, CRUD.UPDATE);
+    }//GEN-LAST:event_modifyButtonActionPerformed
+
+    private void elementEditNameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_elementEditNameActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_elementEditNameActionPerformed
+
+    private void deleteButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteButtonActionPerformed
+        // TODO add your handling code here:
+        //deleteElement();
+        if (deletePriority.getText().trim().isEmpty()) return;
+        
+        String name = selected.name;
+        Element.Type type;
+        int size = selected.size;
+        int priority = Integer.parseInt(deletePriority.getText().trim());
+        
+        if (selected.type == ElementType.FILE) {
+            type = Element.Type.FILE;
+        } else {
+            type = Element.Type.FOLDER;
+        }
+        
+        if (name.isEmpty() || priority < 0) return;
+        if ((type == Element.Type.FILE && priority < 1) || (type == Element.Type.FOLDER && priority < 0)) return;
+        
+        createCRUDProcess(name, size, priority, type, selected.path, CRUD.DELETE);
+    }//GEN-LAST:event_deleteButtonActionPerformed
+
+    private void executingFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_executingFieldActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_executingFieldActionPerformed
+
+    private void startSchedButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startSchedButtonActionPerformed
+        // TODO add your handling code here:
+        if (this.sim.getMode() == UserMode.USER) return;
+        
+        this.stopSchedButton.setEnabled(true);
+        this.startSchedButton.setEnabled(false);
+        this.loadButton.setEnabled(false);
+        this.saveButton.setEnabled(false);
+        this.policyBox.setEnabled(false);
+        
+        this.sim.startSchedulerExecution();
+    }//GEN-LAST:event_startSchedButtonActionPerformed
+
+    private void stopSchedButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_stopSchedButtonActionPerformed
+        // TODO add your handling code here:
+        this.stopSchedButton.setEnabled(false);
+        this.startSchedButton.setEnabled(true);
+        this.loadButton.setEnabled(true);
+        this.saveButton.setEnabled(true);
+        this.policyBox.setEnabled(true);
+        
+        this.sim.stopSchedulerExecution();
+    }//GEN-LAST:event_stopSchedButtonActionPerformed
+
+    private void folderPriorityActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_folderPriorityActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_folderPriorityActionPerformed
+
+    private void filePriorityActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_filePriorityActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_filePriorityActionPerformed
+
+    private void editPriorityActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_editPriorityActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_editPriorityActionPerformed
+
+    private void deletePriorityActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deletePriorityActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_deletePriorityActionPerformed
+
+    private void policyBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_policyBoxActionPerformed
+        // TODO add your handling code here:
+        String selectedItem = this.policyBox.getSelectedItem().toString();
+        
+        Policy policy;
+        
+        try {
+            policy = Policy.valueOf(selectedItem);
+            System.out.println("Selected: " + selectedItem);
+        } catch (Exception e) {
+            policy = Policy.FIFO;
+            System.out.println("Error: Defaulting to FCFS");
+        }
+        
+        this.sim.config.setPolicy(policy);
+    }//GEN-LAST:event_policyBoxActionPerformed
+
+    private void loadButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loadButtonActionPerformed
+        // TODO add your handling code here:
+        resetSimRootFolder();
+        programDataLoad();
+    }//GEN-LAST:event_loadButtonActionPerformed
+
+    private void saveButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveButtonActionPerformed
+        // TODO add your handling code here:
+        programDataSave();
+    }//GEN-LAST:event_saveButtonActionPerformed
+
+    private void resetButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_resetButtonActionPerformed
+        // TODO add your handling code here:
+        this.sim.resetScheduler();
+    }//GEN-LAST:event_resetButtonActionPerformed
+
+    private void cleanButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cleanButtonActionPerformed
+        // TODO add your handling code here:
+        resetSimRootFolder();
+    }//GEN-LAST:event_cleanButtonActionPerformed
+
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String args[]) {
+        /* Set the Nimbus look and feel */
+        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         */
+        try {
+            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (ReflectiveOperationException | javax.swing.UnsupportedLookAndFeelException ex) {
+            logger.log(java.util.logging.Level.SEVERE, null, ex);
+        }
+        //</editor-fold>
+
+        /* Create and display the form */
+        java.awt.EventQueue.invokeLater(() -> new UIMain().setVisible(true));
+    }
+    
+    /*
+     *   Crear procesos de CRUD
+     */
+    
+    public void createCRUDProcess(String fileName, int blocks, int priority, Element.Type type, String[] path, CRUD crud) {
+        String name = "Proceso" + crud.toString() + "-" + String.valueOf(System.currentTimeMillis());
+        
+        Element element = new Element(fileName, blocks, type, path);
+        
+        this.sim.sched.createProcess(name, priority, element, crud);
+    }
+    
+    public void resetSimRootFolder() {
+        this.sim.resetRootFolder();
+        
+        updateJTree();
+        updateJTable();
+    }
+    
+    /*
+     *   Manipulación de JTree
+     */
+    
+    private void addFile(DefaultMutableTreeNode node, FileMetadata reg) {
+        DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(reg.getFileName());
+        
+        newNode.setAllowsChildren(false);
+        
+        node.add(newNode);
+    }
+    
+    private void addFolder(DefaultMutableTreeNode node, Folder reg) {
+        DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(reg.getName());
+        
+        newNode.setAllowsChildren(true);
+        
+        LinkedList<Folder> folders = reg.getSubfolders();
+        LinkedList<FileMetadata> files = reg.getFiles();
+        
+        for (int i = 0; i < folders.size(); i++) {
+            addFolder(newNode, folders.get(i));
+        }
+        
+        for (int i = 0; i < files.size(); i++) {
+            addFile(newNode, files.get(i));
+        }
+        
+        node.add(newNode);
+    }
+    
+    /*
+     *   Updates
+     */
+    
+    private void updateJTableHelper(Folder reg) {
+        LinkedList<Folder> folders = reg.getSubfolders();
+        LinkedList<FileMetadata> files = reg.getFiles();
+        
+        for (int i = 0; i < folders.size(); i++) {
+            updateJTableHelper(folders.get(i));
+        }
+        
+        for (int i = 0; i < files.size(); i++) {
+            fileTableList.add(files.get(i));
+        }
+    }
+    
+    public void updateJTable() {
+        DefaultTableModel model = (DefaultTableModel) fileJTable.getModel();
+
+        for (int i = fileTableList.size() - 1; i >= 0; i--) {
+            model.removeRow(i);
+        }
+
+        this.fileTableList = new LinkedList();
+
+        LinkedList<Folder> folders = this.sim.rootFolder.getSubfolders();
+        LinkedList<FileMetadata> files = this.sim.rootFolder.getFiles();
+
+        for (int i = 0; i < folders.size(); i++) {
+            updateJTableHelper(folders.get(i));
+        }
+
+        for (int i = 0; i < files.size(); i++) {
+            fileTableList.add(files.get(i));
+        }
+
+        for (int i = 0; i < fileTableList.size(); i++) {
+            FileMetadata item = fileTableList.get(i);
+
+            model.insertRow(0, new Object[]{ item.getFileName(), String.valueOf(item.getFileSize()), item.getBlockIndices().toString() });
+        }
+        if (diskPanel != null) {
+            diskPanel.repaint();
+        }
+    }
+    
+    public void updateJTree() {
+        DefaultTreeModel model = (DefaultTreeModel) explorerJTree.getModel();
+        DefaultMutableTreeNode rootFolder = (DefaultMutableTreeNode)model.getRoot();
+
+        rootFolder.removeAllChildren();
+
+        LinkedList<Folder> folders = this.sim.rootFolder.getSubfolders();
+        LinkedList<FileMetadata> files = this.sim.rootFolder.getFiles();
+
+        for (int i = 0; i < folders.size(); i++) {
+            addFolder(rootFolder, folders.get(i));
+        }
+
+        for (int i = 0; i < files.size(); i++) {
+            addFile(rootFolder, files.get(i));
+        }
+
+        model.reload(rootFolder);
+
+        this.sim.currentToRoot();
+    }
+    
+    public final void updateMode() {
+        UserMode mode = this.sim.getMode();
+        
+        switch(mode) {
+            case ADMIN -> {
+                fileName.setEnabled(true);
+                fileSize.setEnabled(true);
+                filePriority.setEnabled(true);
+                folderName.setEnabled(true);
+                folderPriority.setEnabled(true);
+                elementEditName.setEnabled(true);
+                editPriority.setEnabled(true);
+                deletePriority.setEnabled(true);
+                
+                fileButton.setEnabled(true);
+                folderButton.setEnabled(true);
+                modifyButton.setEnabled(true);
+                deleteButton.setEnabled(true);
+            }
+            case USER -> {
+                fileName.setEnabled(false);
+                fileSize.setEnabled(false);
+                filePriority.setEnabled(false);
+                folderName.setEnabled(false);
+                folderPriority.setEnabled(false);
+                elementEditName.setEnabled(false);
+                editPriority.setEnabled(false);
+                deletePriority.setEnabled(false);
+                
+                fileButton.setEnabled(false);
+                folderButton.setEnabled(false);
+                modifyButton.setEnabled(false);
+                deleteButton.setEnabled(false);
+            }
+            default -> {
+                fileName.setEnabled(false);
+                fileSize.setEnabled(false);
+                filePriority.setEnabled(false);
+                folderName.setEnabled(false);
+                folderPriority.setEnabled(false);
+                elementEditName.setEnabled(false);
+                editPriority.setEnabled(false);
+                deletePriority.setEnabled(false);
+                
+                fileButton.setEnabled(false);
+                folderButton.setEnabled(false);
+                modifyButton.setEnabled(false);
+                deleteButton.setEnabled(false);
+            }
+        }
+    }
+    
+    public void updateSelectedElement() {
+        this.elementNameInput.setText(this.selected.name);
+        this.elementSizeInput.setText(String.valueOf(this.selected.size));
+
+        if (this.selected.indices != null) {
+            this.elementIndicesInput.setText(this.selected.indices.toString());
+        } else {
+            this.elementIndicesInput.setText("No hay indices");
+        }
+
+        switch(this.selected.type) {
+            case ElementType.FILE -> {
+                this.elementTypeInput.setText("Archivo");
+            }
+            case ElementType.FOLDER -> {
+                this.elementTypeInput.setText("Carpeta");
+            }
+            default -> {
+                this.elementTypeInput.setText("Desconocido");
+            }
+        }
+
+        this.elementCreatedInput.setText(new Date(this.selected.creation).toString());
+        this.elementModifiedInput.setText(new Date(this.selected.lastModified).toString());
+    }
+    
+    private void updateSchedData() {
+        Thread updater = new Thread(() -> {
+            while(true) {
+                try {
+                    Thread.sleep(500);
+                    
+                    String currentRun;
+                    
+                    if (this.sim.sched.getCurrentProcess() != null) {
+                        currentRun = this.sim.sched.getCurrentProcess().name();
+                    } else {
+                        currentRun = "Ninguno";
+                    }
+                    
+                    String[] newReadyList = this.sim.sched.getReadyList();
+                    String[] newFinishedList = this.sim.sched.getFinishedList();
+                    
+                    
+                    this.executingField.setText(currentRun);
+                    this.readyQueue.setListData(newReadyList);
+                    this.finishedQueue.setListData(newFinishedList);
+                } catch (InterruptedException e) {
+                     Thread.currentThread().interrupt();
+                }
+            }
+        }, "External-Updater");
+        
+        updater.start();
+    }
+    
+    /*
+     *   Eventos
+     */
+    
+    public void initEvents() {
+        
+        // JTree Event
+        explorerJTree.getSelectionModel().addTreeSelectionListener((TreeSelectionEvent e) -> {
+            DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) explorerJTree.getLastSelectedPathComponent();
+            
+            if (selectedNode != null) {
+                int maxPathLength = selectedNode.getUserObjectPath().length;
+                Folder selectionFolder = this.sim.rootFolder;
+                FileMetadata selectionFile;
+                this.sim.currentToRoot();
+                
+                if (selectedNode.getAllowsChildren()) {                    
+                    for (int i = 0; i < maxPathLength; i++) {
+                        selectionFolder = this.sim.getFolder(selectedNode.getUserObjectPath()[i].toString()).getCurrentFolder();
+                    }
+                    
+                    String[] path = new String[maxPathLength];
+                    
+                    for (int i = 0; i < maxPathLength; i++) {
+                        path[i] = String.valueOf(selectedNode.getUserObjectPath()[i]);
+                    }
+                    
+                    this.selected = new TreeNodeSelection(selectionFolder.getName(), 0, null, ElementType.FOLDER, selectionFolder.getCreationTime(), selectionFolder.getLastModifiedTime(), path);
+                } else {
+                    for (int i = 0; i < maxPathLength - 1; i++) {
+                        selectionFolder = this.sim.getFolder(selectedNode.getUserObjectPath()[i].toString()).getCurrentFolder();
+                    }
+                    
+                    String[] path = new String[maxPathLength];
+                    
+                    for (int i = 0; i < maxPathLength; i++) {
+                        path[i] = String.valueOf(selectedNode.getUserObjectPath()[i]);
+                    }
+                    
+                    selectionFile = selectionFolder.getFile(selectedNode.getUserObjectPath()[maxPathLength - 1].toString());
+                    
+                    this.selected = new TreeNodeSelection(selectionFile.getFileName(), selectionFile.getFileSize(), selectionFile.getBlockIndices(), ElementType.FILE, selectionFile.getCreationTime(), selectionFile.getLastModifiedTime(), path);
+                }
+            
+                updateSelectedElement();
+            }
+        });
+    }
+    
+    /*
+     *   Function Class
+     */
+    
+    public void passJTreeToSimulator() {
+        this.sim.setUpdateJTreeFunction((v) -> updateJTree());
+    }
+    
+    public void passJTableToSimulator() {
+        this.sim.setUpdateJTableFunction((v) -> updateJTable());
+    }
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JRadioButton adminButton;
+    private javax.swing.JButton cleanButton;
+    private javax.swing.JToggleButton deleteButton;
+    private javax.swing.JTextField deletePriority;
+    private javax.swing.JPanel diskPanelHolder;
+    private javax.swing.JTextField editPriority;
+    private javax.swing.JTextField elementCreatedInput;
+    private javax.swing.JTextField elementEditName;
+    private javax.swing.JTextField elementIndicesInput;
+    private javax.swing.JTextField elementModifiedInput;
+    private javax.swing.JLabel elementName;
+    private javax.swing.JLabel elementName1;
+    private javax.swing.JLabel elementName2;
+    private javax.swing.JLabel elementName3;
+    private javax.swing.JLabel elementName4;
+    private javax.swing.JTextField elementNameInput;
+    private javax.swing.JLabel elementSize;
+    private javax.swing.JTextField elementSizeInput;
+    private javax.swing.JTextField elementTypeInput;
+    private javax.swing.JTextField executingField;
+    private javax.swing.JTree explorerJTree;
+    private javax.swing.JToggleButton fileButton;
+    private javax.swing.JTable fileJTable;
+    private javax.swing.JTextField fileName;
+    private javax.swing.JTextField filePriority;
+    private javax.swing.JTextField fileSize;
+    private javax.swing.JList<String> finishedQueue;
+    private javax.swing.JToggleButton folderButton;
+    private javax.swing.JTextField folderName;
+    private javax.swing.JTextField folderPriority;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel10;
+    private javax.swing.JLabel jLabel11;
+    private javax.swing.JLabel jLabel12;
+    private javax.swing.JLabel jLabel13;
+    private javax.swing.JLabel jLabel14;
+    private javax.swing.JLabel jLabel15;
+    private javax.swing.JLabel jLabel16;
+    private javax.swing.JLabel jLabel17;
+    private javax.swing.JLabel jLabel18;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
+    private javax.swing.JLabel jLabel5;
+    private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel8;
+    private javax.swing.JLabel jLabel9;
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JPanel jPanel11;
+    private javax.swing.JPanel jPanel2;
+    private javax.swing.JPanel jPanel3;
+    private javax.swing.JPanel jPanel4;
+    private javax.swing.JPanel jPanel5;
+    private javax.swing.JPanel jPanel6;
+    private javax.swing.JPanel jPanel7;
+    private javax.swing.JPanel jPanel8;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JScrollPane jScrollPane3;
+    private javax.swing.JScrollPane jScrollPane4;
+    private javax.swing.JScrollPane jScrollPane5;
+    private javax.swing.JButton loadButton;
+    private javax.swing.ButtonGroup modeGroup;
+    private javax.swing.JToggleButton modifyButton;
+    private javax.swing.JComboBox<String> policyBox;
+    private javax.swing.JList<String> readyQueue;
+    private javax.swing.JButton resetButton;
+    private javax.swing.JButton saveButton;
+    private javax.swing.JButton startSchedButton;
+    private javax.swing.JButton stopSchedButton;
+    private javax.swing.JRadioButton userButton;
+    // End of variables declaration//GEN-END:variables
+}

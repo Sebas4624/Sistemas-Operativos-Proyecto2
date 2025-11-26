@@ -12,22 +12,36 @@ public class Folder {
     private String name;
     final private HashTable<Folder> subfolders;
     final private HashTable<FileMetadata> files;
+    final private long creationTime;
+    private long lastModifiedTime;
 
     public Folder(String name) {
         this.name = name;
         this.subfolders = new HashTable(16);
         this.files = new HashTable(16);
+        this.creationTime = System.currentTimeMillis();
+        this.lastModifiedTime = this.creationTime;
     }
     
     public void createFolder(String name) {
-        Folder newFolder = new Folder(name);
+        String defName = name;
+        LinkedList<Folder> foldersTemp = subfolders.getAllValues();
+
+        for (int j = 0; j < foldersTemp.size(); j++) {
+            if (foldersTemp.get(j).getName().equals(name)) {
+                defName = name + " (" + String.valueOf(System.currentTimeMillis()) + ")";
+                break;
+            }
+        }
         
-        subfolders.insert(newFolder, name);
+        Folder newFolder = new Folder(defName);
+        
+        subfolders.insert(newFolder, defName);
     }
     
     public Folder getFolder(String name) {
-        LinkedList<Folder> resList = this.subfolders.getKeyList(name);
-        Folder selected = null;
+        LinkedList<Folder> resList = this.subfolders.getAllValues();
+        Folder selected = this;
         
         for (int i = 0; i < resList.size(); i++) {
             Folder res = resList.get(i);
@@ -42,7 +56,7 @@ public class Folder {
     }
     
     public void deleteFolder(String name, int NUM_BLOCKS, boolean[] blockFree) {
-        LinkedList<Folder> resList = this.subfolders.getKeyList(name);
+        LinkedList<Folder> resList = this.subfolders.getAllValues();
         
         for (int i = 0; i < resList.size(); i++) {
             Folder res = resList.get(i);
@@ -57,13 +71,13 @@ public class Folder {
     }
     
     public void deleteAllFolders(int NUM_BLOCKS, boolean[] blockFree) {
-        for (int i = 0; i < subfolders.tSize; i++) {
+        for (int i = 0; i < subfolders.list.length; i++) {
             LinkedList<Folder> folderList = subfolders.list[i];
             
             for (int j = 0; j < folderList.size(); j++) {
                 Folder res = folderList.get(j);
                 String folderName;
-
+                
                 if (res != null) {
                     folderName = res.getName();
                     res.deleteAllFiles(NUM_BLOCKS, blockFree);
@@ -96,10 +110,20 @@ public class Folder {
                     j++;
                 }
             }
+            
+            String defName = fileName;
+            LinkedList<FileMetadata> filesTemp = files.getAllValues();
+            
+            for (int j = 0; j < filesTemp.size(); j++) {
+                if (filesTemp.get(j).getFileName().equals(fileName)) {
+                    defName = fileName + " (" + String.valueOf(System.currentTimeMillis()) + ")";
+                    break;
+                }
+            }
 
-            FileMetadata newFileMeta = new FileMetadata(fileName, blockSize, assignedBlocks);
+            FileMetadata newFileMeta = new FileMetadata(defName, blockSize, assignedBlocks);
 
-            files.insert(newFileMeta, fileName);
+            files.insert(newFileMeta, defName);
         } else {
             Printer.print("Cannot create \"" + fileName + "\" due to insufficient space");
         }
@@ -160,9 +184,35 @@ public class Folder {
     public String getName() { return this.name; }
     public HashTable getSubfolderList() { return this.subfolders; }
     public HashTable getFilesList() { return this.files; }
+    public long getCreationTime() { return this.creationTime; }
+    public long getLastModifiedTime() { return this.lastModifiedTime; }
     
+    public LinkedList<Folder> getSubfolders() {
+        return this.subfolders.getAllValues();
+    }
+    
+    public LinkedList<FileMetadata> getFiles() {
+        return this.files.getAllValues();
+    }
+    
+    public FileMetadata getFile(String name) {
+        LinkedList<FileMetadata> list = this.files.getAllValues();
+        
+        for (int i = 0; i < list.size(); i++) {
+            if (list.get(i).getFileName() == null ? name == null : list.get(i).getFileName().equals(name)) {
+                return list.get(i);
+            }
+        }
+        
+        return null;
+    }
+            
     public void setName(String newName) {
         this.name = newName;
+    }
+    
+    public void setLastModifiedTime(long newTime) {
+        this.lastModifiedTime = newTime;
     }
     
     @Override
