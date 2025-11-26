@@ -94,7 +94,7 @@ public final class UIMain extends javax.swing.JFrame {
                 file.getFileName() + "," +
                 file.getFileSize()+ "," +
                 "1" + "," +
-                "File" + "," +
+                "FILE" + "," +
                 currentPath
             );
             writer.newLine();
