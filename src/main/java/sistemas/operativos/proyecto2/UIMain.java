@@ -241,6 +241,7 @@ public final class UIMain extends javax.swing.JFrame {
         saveButton = new javax.swing.JButton();
         loadButton = new javax.swing.JButton();
         resetButton = new javax.swing.JButton();
+        cleanButton = new javax.swing.JButton();
         jPanel3 = new javax.swing.JPanel();
         jPanel4 = new javax.swing.JPanel();
         jLabel2 = new javax.swing.JLabel();
@@ -372,6 +373,17 @@ public final class UIMain extends javax.swing.JFrame {
             }
         });
 
+        cleanButton.setBackground(new java.awt.Color(102, 102, 102));
+        cleanButton.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        cleanButton.setForeground(new java.awt.Color(255, 255, 255));
+        cleanButton.setText("Limpiar Raíz");
+        cleanButton.setFocusPainted(false);
+        cleanButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cleanButtonActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
@@ -385,6 +397,8 @@ public final class UIMain extends javax.swing.JFrame {
                         .addComponent(userButton))
                     .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(cleanButton)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(resetButton)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(loadButton, javax.swing.GroupLayout.PREFERRED_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -407,7 +421,8 @@ public final class UIMain extends javax.swing.JFrame {
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(saveButton, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(loadButton, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(resetButton, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(resetButton, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(cleanButton, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(14, 14, 14))
         );
 
@@ -1367,6 +1382,11 @@ public final class UIMain extends javax.swing.JFrame {
         this.sim.resetScheduler();
     }//GEN-LAST:event_resetButtonActionPerformed
 
+    private void cleanButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cleanButtonActionPerformed
+        // TODO add your handling code here:
+        resetSimRootFolder();
+    }//GEN-LAST:event_cleanButtonActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -1682,6 +1702,7 @@ public final class UIMain extends javax.swing.JFrame {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JRadioButton adminButton;
+    private javax.swing.JButton cleanButton;
     private javax.swing.JToggleButton deleteButton;
     private javax.swing.JTextField deletePriority;
     private javax.swing.JPanel diskPanelHolder;

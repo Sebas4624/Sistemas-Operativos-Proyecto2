@@ -73,31 +73,31 @@ public class Scheduler {
     
     //   Politica de planificación FIFO (First-In, First-Out)
     
-    public void executeFIFO() {
+    public synchronized void executeFIFO() {
         execute(0);
     }
     
     //   Politica de planificación LIFO (Last-In, First-Out)
     
-    public void executeLIFO() {
+    public synchronized void executeLIFO() {
         execute(1);
     }
     
     //   Politica de planificación RANDOM (Aleatorio)
     
-    public void executeRANDOM() {
+    public synchronized void executeRANDOM() {
         execute(2);
     }
     
     //   Politica de planificación PRI (Prioridad)
     
-    public void executePRI() {
+    public synchronized void executePRI() {
         execute(3);
     }
     
     //   Politica de planificación SSTF (Shortest Servicer Time First)
     
-    public void executeSSTF() {
+    public synchronized void executeSSTF() {
         execute(4);
     }
     
@@ -105,7 +105,7 @@ public class Scheduler {
      *   Planificar procesos
      */
     
-    private void scheduleNextProcess(int mode) {
+    private synchronized void scheduleNextProcess(int mode) {
         switch (mode) {
             // FIFO
             case 0 -> {

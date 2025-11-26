@@ -36,7 +36,7 @@ public class Folder {
         
         Folder newFolder = new Folder(defName);
         
-        subfolders.insert(newFolder, name);
+        subfolders.insert(newFolder, defName);
     }
     
     public Folder getFolder(String name) {
@@ -71,13 +71,13 @@ public class Folder {
     }
     
     public void deleteAllFolders(int NUM_BLOCKS, boolean[] blockFree) {
-        for (int i = 0; i < subfolders.tSize; i++) {
+        for (int i = 0; i < subfolders.list.length; i++) {
             LinkedList<Folder> folderList = subfolders.list[i];
             
             for (int j = 0; j < folderList.size(); j++) {
                 Folder res = folderList.get(j);
                 String folderName;
-
+                
                 if (res != null) {
                     folderName = res.getName();
                     res.deleteAllFiles(NUM_BLOCKS, blockFree);

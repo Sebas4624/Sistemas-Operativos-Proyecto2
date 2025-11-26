@@ -291,7 +291,7 @@ public class Simulator {
         }
     }
     
-    public void startSchedulerExecution() {
+    public synchronized void startSchedulerExecution() {
         if (this.sched.isActive()) {
             starter = new Thread(() -> {
                 this.startScheduler();
@@ -301,7 +301,7 @@ public class Simulator {
         starter.start();
     }
     
-    public void stopSchedulerExecution() {
+    public synchronized void stopSchedulerExecution() {
         starter.interrupt();
         
         starter = new Thread(() -> {
@@ -313,18 +313,16 @@ public class Simulator {
      *   Simulator Methods
      */
     
-    public Folder getCurrentFolder() {
+    public synchronized Folder getCurrentFolder() {
         return this.currentFolder;
     }
     
-    /* Relative */
-    
-    public void writeFile(String fileName, int blockSize) {
+    public synchronized void writeFile(String fileName, int blockSize) {
         if (!checkWritePermission("writeFile")) return;
         currentFolder.writeFile(fileName, blockSize, NUM_BLOCKS, blockFree);
     }
     
-    public void modifyFile(String fileName, String newName) {
+    public synchronized void modifyFile(String fileName, String newName) {
         if (!checkWritePermission("modifyFile")) return;
         
         String defName = newName;
@@ -345,7 +343,7 @@ public class Simulator {
         }
     }
     
-    public void deleteFile(String fileName) {
+    public synchronized void deleteFile(String fileName) {
         if (!checkWritePermission("deleteFile")) return;
         
         try {
@@ -355,18 +353,18 @@ public class Simulator {
         }
     }
     
-    public void createFolder(String name) {
+    public synchronized void createFolder(String name) {
         if (!checkWritePermission("createFolder")) return;
         currentFolder.createFolder(name);
     }
     
-    public Simulator getFolder(String name) {
+    public synchronized Simulator getFolder(String name) {
         Folder newFolder = currentFolder.getFolder(name);
         if (newFolder != null) currentFolder = newFolder;
         return this;
     }
     
-    public void modifyFolder(String name, Folder folder) {
+    public synchronized void modifyFolder(String name, Folder folder) {
         if (!checkWritePermission("modifyFolder")) return;
         
         String defName = name;
@@ -387,7 +385,7 @@ public class Simulator {
         }
     }
     
-    public void deleteFolder(String name) {
+    public synchronized void deleteFolder(String name) {
         if (!checkWritePermission("deleteFolder")) return;
         
         try {
@@ -397,13 +395,13 @@ public class Simulator {
         }
     }
     
-    public void resetRootFolder() {
+    public synchronized void resetRootFolder() {
         this.currentToRoot();
         currentFolder.deleteAllFiles(NUM_BLOCKS, blockFree);
         currentFolder.deleteAllFolders(NUM_BLOCKS, blockFree);
     }
     
-    public void resetScheduler() {
+    public synchronized void resetScheduler() {
         this.sched.resetSchedulerState();
     }
     
