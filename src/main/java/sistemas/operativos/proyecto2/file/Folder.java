@@ -24,9 +24,19 @@ public class Folder {
     }
     
     public void createFolder(String name) {
-        Folder newFolder = new Folder(name);
+        String defName = name;
+        LinkedList<Folder> foldersTemp = subfolders.getAllValues();
+
+        for (int j = 0; j < foldersTemp.size(); j++) {
+            if (foldersTemp.get(j).getName().equals(name)) {
+                defName = name + " (" + String.valueOf(System.currentTimeMillis()) + ")";
+                break;
+            }
+        }
         
-        subfolders.insert(newFolder, name);
+        Folder newFolder = new Folder(defName);
+        
+        subfolders.insert(newFolder, defName);
     }
     
     public Folder getFolder(String name) {
@@ -61,13 +71,13 @@ public class Folder {
     }
     
     public void deleteAllFolders(int NUM_BLOCKS, boolean[] blockFree) {
-        for (int i = 0; i < subfolders.tSize; i++) {
+        for (int i = 0; i < subfolders.list.length; i++) {
             LinkedList<Folder> folderList = subfolders.list[i];
             
             for (int j = 0; j < folderList.size(); j++) {
                 Folder res = folderList.get(j);
                 String folderName;
-
+                
                 if (res != null) {
                     folderName = res.getName();
                     res.deleteAllFiles(NUM_BLOCKS, blockFree);
@@ -100,10 +110,20 @@ public class Folder {
                     j++;
                 }
             }
+            
+            String defName = fileName;
+            LinkedList<FileMetadata> filesTemp = files.getAllValues();
+            
+            for (int j = 0; j < filesTemp.size(); j++) {
+                if (filesTemp.get(j).getFileName().equals(fileName)) {
+                    defName = fileName + " (" + String.valueOf(System.currentTimeMillis()) + ")";
+                    break;
+                }
+            }
 
-            FileMetadata newFileMeta = new FileMetadata(fileName, blockSize, assignedBlocks);
+            FileMetadata newFileMeta = new FileMetadata(defName, blockSize, assignedBlocks);
 
-            files.insert(newFileMeta, fileName);
+            files.insert(newFileMeta, defName);
         } else {
             Printer.print("Cannot create \"" + fileName + "\" due to insufficient space");
         }
