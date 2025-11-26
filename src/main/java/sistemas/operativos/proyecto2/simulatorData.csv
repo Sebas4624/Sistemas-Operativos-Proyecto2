@@ -1,7 +1,11 @@
 fileName,blocks,priority,type,path
-archivo_prueba1,2,1,FILE,root
-archivo_prueba2,4,1,FILE,root
-carpeta_prueba1,1,1,FOLDER,root
-carpeta_prueba2,1,1,FOLDER,root
-archivo_prueba3,3,1,FILE,root/carpeta_prueba1
-archivo_prueba4,1,1,FILE,root/carpeta_prueba2
+archivo1,2,1,FILE,root
+archivo2,4,1,FILE,root
+carpeta1,1,1,FOLDER,root
+carpeta2,1,1,FOLDER,root
+archivo3,3,1,FILE,root/carpeta1
+archivo4,2,1,FILE,root/carpeta2
+archivo5,1,1,FILE,root/folder1/folder2/folder3/folder4
+archivo6,7,1,FILE,root/folder1/folder2/folder3
+archivo7,4,1,FILE,root/folder1/folder2
+archivo7,3,1,FILE,root/folder1/folder2

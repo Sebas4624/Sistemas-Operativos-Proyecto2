@@ -176,9 +176,21 @@ public class Simulator {
                     case Element.Type.FILE -> {
                         for (int i = 0; i < current.getElementPath().length; i++) {
                             if (i == current.getElementPath().length - 1) {
-                                this.getFolder(current.getElementPath()[i]).writeFile(current.getElementName(), current.getElementBlocks());
+                                this.getFolder(current.getElementPath()[i]);
+                                
+                                if (!this.getCurrentFolder().getName().equals(current.getElementPath()[i])) {
+                                    this.createFolder(current.getElementPath()[i]);
+                                    this.getFolder(current.getElementPath()[i]).writeFile(current.getElementName(), current.getElementBlocks());
+                                } else {
+                                    this.writeFile(current.getElementName(), current.getElementBlocks());
+                                }
                             } else {
                                 this.getFolder(current.getElementPath()[i]);
+                                
+                                if (!this.getCurrentFolder().getName().equals(current.getElementPath()[i])) {
+                                    this.createFolder(current.getElementPath()[i]);
+                                    this.getFolder(current.getElementPath()[i]);
+                                }
                             }
                         }
 
@@ -187,9 +199,21 @@ public class Simulator {
                     case Element.Type.FOLDER -> {
                         for (int i = 0; i < current.getElementPath().length; i++) {
                             if (i == current.getElementPath().length - 1) {
-                                this.getFolder(current.getElementPath()[i]).createFolder(current.getElementName());
+                                this.getFolder(current.getElementPath()[i]);
+                                
+                                if (!this.getCurrentFolder().getName().equals(current.getElementPath()[i])) {
+                                    this.createFolder(current.getElementPath()[i]);
+                                    this.getFolder(current.getElementPath()[i]).writeFile(current.getElementName(), current.getElementBlocks());
+                                } else {
+                                    this.createFolder(current.getElementName());
+                                }
                             } else {
                                 this.getFolder(current.getElementPath()[i]);
+                                
+                                if (!this.getCurrentFolder().getName().equals(current.getElementPath()[i])) {
+                                    this.createFolder(current.getElementPath()[i]);
+                                    this.getFolder(current.getElementPath()[i]);
+                                }
                             }
                         }
 
@@ -313,13 +337,22 @@ public class Simulator {
             }
         }
         
-        currentFolder.getFile(fileName).setLastModifiedTime(System.currentTimeMillis());
-        currentFolder.getFile(fileName).setFileName(defName);
+        try {
+            currentFolder.getFile(fileName).setLastModifiedTime(System.currentTimeMillis());
+            currentFolder.getFile(fileName).setFileName(defName);
+        } catch (Exception e) {
+            Printer.print("Archivo no encontrado");
+        }
     }
     
     public void deleteFile(String fileName) {
         if (!checkWritePermission("deleteFile")) return;
-        currentFolder.deleteFile(fileName, NUM_BLOCKS, blockFree);
+        
+        try {
+            currentFolder.deleteFile(fileName, NUM_BLOCKS, blockFree);
+        } catch (Exception e) {
+            Printer.print("Archivo no encontrado");
+        }
     }
     
     public void createFolder(String name) {
@@ -346,13 +379,22 @@ public class Simulator {
             }
         }
         
-        currentFolder.setLastModifiedTime(System.currentTimeMillis());
-        currentFolder.setName(defName);
+        try {
+            currentFolder.setLastModifiedTime(System.currentTimeMillis());
+            currentFolder.setName(defName);
+        } catch (Exception e) {
+            Printer.print("Archivo no encontrado");
+        }
     }
     
     public void deleteFolder(String name) {
         if (!checkWritePermission("deleteFolder")) return;
-        currentFolder.deleteFolder(name, NUM_BLOCKS, blockFree);
+        
+        try {
+            currentFolder.deleteFolder(name, NUM_BLOCKS, blockFree);
+        } catch (Exception e) {
+            Printer.print("Archivo no encontrado");
+        }
     }
     
     public void resetRootFolder() {
